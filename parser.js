@@ -13,7 +13,7 @@ const LINKING=new Set([...BE,...'seem seems seemed appear appears appeared becom
 const PURE_LINKING=new Set([...BE,...'seem seems seemed become becomes became remain remains remained'.split(' ')]);
 const DITRANSITIVE=new Set('give gives gave given send sends sent tell tells told show shows showed shown teach teaches taught buy buys bought bring brings brought offer offers offered lend lends lent write writes wrote written hand hands handed pass passes passed pay pays paid promise promises promised read reads throw throws threw thrown wish wishes wished ask asks asked award awards awarded grant grants granted owe owes owed leave leaves left make makes made cook cooks cooked get gets got sing sings sang sung save saves saved find finds found fetch fetches fetched deny denies denied charge charges charged cost costs'.split(' '));
 const OC_CONSIDER=new Set('call calls called name names named make makes made find finds found keep keeps kept leave leaves left consider considers considered think thinks thought believe believes believed elect elects elected appoint appoints appointed declare declares declared prove proves proved proven render renders rendered drive drives drove driven turn turns turned paint paints painted dye dyes dyed color colors colored crown crowns crowned label labels labeled'.split(' '));
-const CAUSATIVE=new Set('make makes made let lets have has had'.split(' '));
+const CAUSATIVE=new Set('make makes made let lets have has had set sets'.split(' '));
 const PERCEPTION=new Set('see sees saw seen watch watches watched hear hears heard feel feels felt smell smells smelled smelt notice notices noticed observe observes observed'.split(' '));
 const INDUCTIVE=new Set('help helps helped get gets got gotten'.split(' '));
 const OC_GENERAL=new Set('tell tells told ask asks asked want wants wanted expect expects expected advise advises advised allow allows allowed cause causes caused enable enables enabled encourage encourages encouraged force forces forced invite invites invited order orders ordered permit permits permitted persuade persuades persuaded remind reminds reminded require requires required urge urges urged warn warns warned forbid forbids forbade forbidden need needs needed'.split(' '));
@@ -22,14 +22,14 @@ const PREP=new Set('in on at to for with by from of about into through during be
 const ART=new Set(['a','an','the']);
 const CONJ=new Set(['and','or','nor','but','yet']);
 const PRO_S=new Set('i you he she it we they who what which that one there'.split(' '));
-const PRO_O=new Set('me you him her it us them whom myself yourself himself herself itself ourselves themselves'.split(' '));
+const PRO_O=new Set('me you him her it us them whom myself yourself himself herself itself ourselves themselves someone somebody anyone anybody everyone everybody something anything everything nobody nothing'.split(' '));
 const DEMO=new Set(['this','that','these','those']);
-const ADV_SET=new Set('very so too really quite rather pretty extremely always never often sometimes usually already still just also even only here there now then today yesterday tomorrow soon early late fast slowly quickly well badly hard easily carefully certainly probably perhaps maybe definitely surely clearly simply together alone again almost enough ever far however instead long much nearly not once away back how when where why up down out off continuously earnestly thoroughly simultaneously instantly constantly merely finally suddenly recently frequently immediately eventually apparently obviously necessarily gradually literally naturally certainly actually generally especially particularly recently basically essentially merely primarily specifically'.split(' '));
-const ADJ_SET=new Set('good bad great big small large little old new young long short high low hot cold warm cool fast slow happy sad angry beautiful ugly nice fine open closed rich poor strong weak hard soft easy difficult important simple complex full empty clean dirty dark light bright deep wide narrow thick thin flat round sharp smooth quiet loud safe dangerous free busy ready sorry sure true false real possible impossible necessary available famous popular serious terrible wonderful amazing excellent perfect brilliant fantastic gorgeous handsome lovely pretty ambitious afraid alive alone asleep awake aware glad proud brave calm clever cruel curious dear eager fair faithful familiar fierce fond foolish gentle grateful guilty humble innocent jealous keen kind lazy loyal modest nervous patient polite rare rude selfish shy silly sincere stupid suspicious tall tiny tough vast violent visible wise worthy diligent special precise accurate electronic sophisticated similar conventional whole entire complete mere main chief own right wrong next last certain such due own previous different various other another several many few much little enough own blue red green yellow black white golden entire proper whole responsible effective efficient pleasant creative productive comfortable foreign domestic urban rural medical legal financial technical digital modern ancient recent'.split(' '));
+const ADV_SET=new Set('very so too really quite rather pretty extremely always never often sometimes usually already still just also even only here there now then today yesterday tomorrow soon early late fast high slowly quickly well badly hard easily carefully certainly probably perhaps maybe definitely surely clearly simply together alone again almost enough ever far however instead long much nearly not once away back how when where why up down out off continuously earnestly thoroughly simultaneously instantly constantly merely finally suddenly recently frequently immediately eventually apparently obviously necessarily gradually literally naturally certainly actually generally especially particularly recently basically essentially merely primarily specifically'.split(' '));
+const ADJ_SET=new Set('good bad great big small large little old new young long short high low hot cold warm cool fast slow happy sad angry beautiful ugly nice fine open closed rich poor strong weak hard soft easy difficult important simple complex full empty clean dirty dark light bright deep wide narrow thick thin flat round sharp smooth quiet loud safe dangerous free busy ready sorry sure true false real possible impossible necessary available famous popular serious terrible wonderful amazing excellent perfect brilliant fantastic gorgeous handsome lovely pretty ambitious afraid alive alone asleep awake aware glad proud brave calm clever cruel curious dear eager fair faithful familiar fierce fond foolish gentle grateful guilty humble innocent jealous keen kind lazy loyal modest nervous patient polite rare rude selfish shy silly sincere stupid suspicious tall tiny tough vast violent visible wise worthy diligent special precise accurate electronic sophisticated similar conventional whole entire complete mere main chief own right wrong next last certain such due own previous different various other another several many few much little enough own blue red green yellow black white golden entire proper whole responsible effective efficient pleasant creative productive comfortable foreign domestic urban rural medical legal financial technical digital modern ancient recent interesting exciting boring surprising amazing confusing disappointing encouraging exhausting fascinating frightening irritating overwhelming relaxing satisfying shocking stunning terrifying thrilling annoying charming concerning disturbing embarrassing entertaining existing inspiring missing outstanding promising remaining resulting'.split(' '));
 const INTRANS_ONLY=new Set('rise rises rose risen arrive arrives arrived die dies died exist exists existed happen happens happened shine shines shone rain rains rained wander wanders wandered sleep sleeps slept laugh laughs laughed cry cries cried smile smiles smiled walk walks walked run runs ran sit sits sat stand stands stood swim swims swam lie lies lay lain live lives lived work works worked travel travels traveled wait waits waited fall falls fell fallen emerge emerges emerged disappear disappears disappeared occur occurs occurred proceed proceeds proceeded function functions functioned breathe breathes breathed sneeze sneezes sneezed cough coughs coughed yawn yawns yawned sigh sighs sighed tremble trembles trembled shiver shivers shivered jump jumps jumped kneel kneels knelt bark barks barked relax relaxes relaxed'.split(' '));
 
 // 자타 겸용 동사 (자동사/타동사 모두 가능) — TRANSITIVE에 추가
-const AMBI_VERBS=new Set('dance dances danced sing sings sang sung fly flies flew flown climb climbs climbed scream screams screamed shout shouts shouted whisper whispers whispered move moves moved change changes changed grow grows grew grown stop stops stopped continue continues continued'.split(' '));
+const AMBI_VERBS=new Set('dance dances danced sing sings sang sung fly flies flew flown climb climbs climbed scream screams screamed shout shouts shouted whisper whispers whispered move moves moved change changes changed grow grows grew grown stop stops stopped continue continues continued shake shakes shook shaken ring rings rang rung swim swims swam swum hang hangs hung blow blows blew blown draw draws drew drawn'.split(' '));
 
 // 일반 타동사 (3형식 전용) — 확장
 const TRANSITIVE=new Set('eat eats ate eaten drink drinks drank drunk play plays played read reads write writes wrote written study studies studied learn learns learned learnt use uses used open opens opened close closes closed start starts started stop stops stopped begin begins began begun finish finishes finished enjoy enjoys enjoyed love loves loved like likes liked hate hates hated need needs needed want wants wanted take takes took taken carry carries carried hold holds held catch catches caught hit hits break breaks broke broken build builds built cut cuts create creates created destroy destroys destroyed develop develops developed discuss discusses discussed explain explains explained improve improves improved include includes included involve involves involved meet meets met produce produces produced provide provides provided receive receives received remember remembers remembered serve serves served speak speaks spoke spoken spend spends spent support supports supported understand understands understood visit visits visited accept accepts accepted achieve achieves achieved choose chooses chose chosen describe describes described establish establishes established examine examines examined follow follows followed mention mentions mentioned obtain obtains obtained prepare prepares prepared raise raises raised suggest suggests suggested complete completes completed contain contains contained express expresses expressed manage manages managed represent represents represented solve solves solved review reviews reviewed analyze analyzes analyzed check checks checked test tests tested fix fixes fixed handle handles handled replace replaces replaced remove removes removed add adds added update updates updated submit submits submitted cancel cancels canceled confirm confirms confirmed share shares shared upload uploads uploaded download downloads downloaded install installs installed delete deletes deleted edit edits edited publish publishes published release releases released launch launches launched consider considers considered avoid avoids avoided attempt attempts attempted continue continues continued decide decides decided determine determines determined discover discovers discovered enjoy enjoys enjoyed expand expands expanded explore explores explored generate generates generated identify identifies identified indicate indicates indicated maintain maintains maintained observe observes observed perform performs performed prevent prevents prevented protect protects protected reduce reduces reduced report reports reported require requires required'.split(' '));
@@ -225,22 +225,35 @@ function splitNP(words){
 }
 
 // 명사 그룹 개수 세기 (4형식: 2그룹, 5형식: 2그룹, 3형식: 1그룹)
-// 관사(a/the)가 새 그룹을 시작
+// 관사(a/the)가 새 그룹 시작, 연속 명사(baby Leo)도 별도 그룹
 function countNounGroups(words){
-    let groups=0, inGroup=false;
+    let groups=0, inGroup=false, hasHead=false;
     for(const w of words){
         const l=lo(w);
         if(ART.has(l)){
             // 관사 = 새 그룹 시작
             if(inGroup) groups++;
             inGroup=true;
+            hasHead=false;
         } else if(PRO_O.has(l)||PRO_S.has(l)){
             if(inGroup) groups++;
             groups++;
             inGroup=false;
-        } else if(!isAdj(w)&&!isAdv(w)&&!CONJ.has(l)){
-            // 명사
-            if(!inGroup){inGroup=true;}
+            hasHead=false;
+        } else if(isAdj(w)&&!ART.has(l)){
+            // 형용사는 그룹 내 수식어 (그룹 유지)
+        } else if(isAdv(w)){
+            // 부사는 무시
+        } else if(!CONJ.has(l)){
+            // 명사: 이미 head가 있는 그룹에 또 명사가 오면 새 그룹
+            if(inGroup&&hasHead){
+                groups++;
+                inGroup=true;
+                hasHead=true;
+            } else {
+                inGroup=true;
+                hasHead=true;
+            }
         }
     }
     if(inGroup) groups++;
@@ -688,7 +701,7 @@ function parseRem(words,lw,si,R){
                 toInf=words.slice(i); break;
             }
         }
-        if(PREP.has(lw[i])&&!(lw[i]==='to'&&i+1<words.length&&(isV(words[i+1])||(!ART.has(lw[i+1])&&!PREP.has(lw[i+1])&&!isAdv(words[i+1])&&!PRO_S.has(lw[i+1])&&!DEMO.has(lw[i+1])&&!CONJ.has(lw[i+1]))))){
+        if(PREP.has(lw[i])&&!(lw[i]==='to'&&i+1<words.length&&(isV(words[i+1])||(!ART.has(lw[i+1])&&!PREP.has(lw[i+1])&&!isAdv(words[i+1])&&!PRO_S.has(lw[i+1])&&!PRO_O.has(lw[i+1])&&!DEMO.has(lw[i+1])&&!CONJ.has(lw[i+1]))))){
             let pp=[words[i]];i++;
             while(i<words.length&&!PREP.has(lw[i])&&lw[i]!=='to'){pp.push(words[i]);i++;}
             prepPh.push(pp.join(' ')); continue;
@@ -707,6 +720,19 @@ function parseRem(words,lw,si,R){
         R.modV.push(...tokens,...prepPh);
         if(toInf) R.modV.push(toInf.join(' '));
         return;
+    }
+
+    // LINKING 동사 뒤 "like ..." → 보어로 처리 (sounds like a good idea)
+    if(isLnk&&tokens.length===0&&prepPh.length>0){
+        const likeIdx=prepPh.findIndex(pp=>lo(pp.split(/\s+/)[0])==='like');
+        if(likeIdx>=0){
+            const likePP=prepPh.splice(likeIdx,1)[0];
+            const likeWords=likePP.split(/\s+/);
+            R.comp=splitNP(likeWords);
+            R.modV.push(...prepPh);
+            if(toInf) R.modV.push(toInf.join(' '));
+            return;
+        }
     }
 
     // 순수 연결동사 → 2형식 확정
@@ -729,7 +755,8 @@ function parseRem(words,lw,si,R){
     // ================================================================
 
     // LINKING 전용 (non-pure, not in other categories) → 2형식
-    if(isLnk&&!isPure&&!isDi&&!isOcC&&tokens.length>0){
+    // 단, 지각동사(felt, smelled 등)는 5형식 가능 → tokens에 동사가 있으면 건너뜀
+    if(isLnk&&!isPure&&!isDi&&!isOcC&&!isPerc&&tokens.length>0){
         assignComp(tokens, R);
         R.modV.push(...prepPh);
         if(toInf) R.modV.push(toInf.join(' '));
@@ -741,11 +768,20 @@ function parseRem(words,lw,si,R){
     // LINKING 또는 OC_CONSIDER(make 등)에 있는 동사만 2형식 후보
     // to부정사가 있으면 2형식 체크를 건너뜀
     if((isDi||isOcC||isLnk)&&tokens.length>0){
-        // to부정사 OC가 있고 OC_GENERAL/사역/지각이면 → 이퀄 체크 건너뛰고 5형식으로
-        if(toInf&&(isOcG||isCau||isPerc||isInd)){
+        // to부정사 OC가 있으면 → 이퀄 체크 건너뛰고 5형식으로
+        if(toInf&&(isOcG||isOcC||isCau||isPerc||isInd)){
             // 5형식 로직으로 넘김 (아래 블록에서 처리)
         } else if(isLnk||isOcC) {
         // LINKING 또는 OC_CONSIDER 동사일 때 이퀄 관계 2형식 체크
+
+        // 동사 뒤에 형용사/부사/접속사만 있으면 바로 2형식 (turned red and yellow 등)
+        if(isAdjComp(tokens)){
+            assignComp(tokens, R);
+            R.modV.push(...prepPh);
+            if(toInf) R.modV.push(toInf.join(' '));
+            return;
+        }
+
         let nounP=[],advP=[];
         for(const t of tokens){
             if(isAdv(t)&&!PRO_O.has(lo(t)))advP.push(t);else nounP.push(t);
@@ -761,6 +797,10 @@ function parseRem(words,lw,si,R){
             }
         }
         if(countNounGroups(nounP)>=2) isOcPattern=true;
+        // tokens 전체에 동사(원형/~ing)가 포함되면 OC 패턴 (felt the house shake)
+        if(!isOcPattern&&(isPerc||isCau||isInd)&&tokens.some(t=>isV(t)&&!isAdj(t)||t.endsWith('ing'))){
+            isOcPattern=true;
+        }
 
         // 명사가 1그룹이고 OC 패턴이 아니고 주어와 이퀄이면 → 2형식
         if(!isOcPattern&&nounP.length>0&&countNounGroups(nounP)<=1&&isEqualRelation(R.sub.head, nounP)){
@@ -774,21 +814,23 @@ function parseRem(words,lw,si,R){
     }
 
     // 5형식: to부정사 OC → (ones) + to부정사를 수식어로 (교수님 체계)
-    if(toInf&&(isOcG||isCau||isPerc||isInd)&&tokens.length>0){
+    if(toInf&&(isOcG||isOcC||isCau||isPerc||isInd)&&tokens.length>0){
         R.obj=splitNP(tokens);
         R.oc={head:'(ones)',mods:[toInf.join(' ')]};
         if(isCau)R.verbSub='사역동사';else if(isPerc)R.verbSub='지각동사';
-        else if(isInd)R.verbSub='유도동사';else R.verbSub='비사역동사';
+        else if(isInd)R.verbSub='유도동사';else if(isOcC)R.verbSub='간주동사';else R.verbSub='비사역동사';
         R.modV.push(...prepPh); return;
     }
 
-    // 5형식: 사역/지각 + O + 원형부정사
-    // "made him clean the room" — 사역/지각 뒤 대명사 다음 단어는 원형부정사일 가능성 높음
-    if((isCau||isPerc)&&tokens.length>=2){
+    // 5형식: 사역/지각/유도 + O + 원형부정사/~ing
+    // "made him clean the room", "helped me carry the box", "heard someone knocking"
+    if((isCau||isPerc||isInd)&&tokens.length>=2){
         let objEnd=-1;
         for(let j=0;j<tokens.length;j++){
-            if(PRO_O.has(lt[j])){objEnd=j;break;}
+            if(PRO_O.has(lt[j])||PRO_S.has(lt[j])){objEnd=j;break;}
             if(j>0&&isV(tokens[j])&&!isAdj(tokens[j])){objEnd=j-1;break;}
+            // ~ing 동사를 만나면 앞까지가 목적어
+            if(j>0&&tokens[j].endsWith('ing')&&isV(tokens[j])){objEnd=j-1;break;}
         }
         // 사역/지각 문맥: 대명사 뒤 단���가 관사/전치사/접속사가 아니면 동사로 추정
         // "him clean the room" → clean은 원형부정사
@@ -804,6 +846,10 @@ function parseRem(words,lw,si,R){
             if(!nextIsVerb&&isAdj(tokens[objEnd+1])&&objEnd+2<tokens.length&&ART.has(lt[objEnd+2])){
                 nextIsVerb=true;
             }
+            // ~ing로 끝나는 단어 → 현재분사로 동사 취급 (knocking, playing 등)
+            if(!nextIsVerb&&tokens[objEnd+1].endsWith('ing')){
+                nextIsVerb=true;
+            }
         }
         if(objEnd>=0&&nextIsVerb){
             R.obj=splitNP(tokens.slice(0,objEnd+1));
@@ -813,7 +859,7 @@ function parseRem(words,lw,si,R){
             for(const w of ocRest){if(isAdv(w))ocAdv.push(w);else ocObj.push(w);}
             let ocPhrase=ocVerb+(ocObj.length?' '+ocObj.join(' '):'');
             R.oc={head:'(ones)',mods:[ocPhrase,...ocAdv]};
-            if(isCau)R.verbSub='사역동사';else R.verbSub='지각동사';
+            if(isCau)R.verbSub='사역동사';else if(isPerc)R.verbSub='지각동사';else R.verbSub='유도동사';
             R.modV.push(...prepPh); return;
         }
     }
@@ -899,6 +945,24 @@ function parseRem(words,lw,si,R){
         if(doW.length>0){
             R.io=splitNP(ioW); R.obj=splitNP(doW);
             R.modV.push(...prepPh); if(toInf)R.modV.push(toInf.join(' ')); return;
+        }
+    }
+
+    // 5형식: OC_GENERAL/OC_CONSIDER + NP + 과거분사(~ed) OC
+    // "I want my steak cooked medium rare" → O:steak, OC:(ones) [cooked medium rare]
+    if((isOcG||isOcC)&&tokens.length>=2){
+        // tokens에서 과거분사(~ed)를 찾아 그 앞까지 O, 나머지 OC
+        for(let j=1;j<tokens.length;j++){
+            if(tokens[j].endsWith('ed')&&isV(tokens[j])&&!ART.has(lt[j])){
+                const objTokens=tokens.slice(0,j);
+                const ocTokens=tokens.slice(j);
+                if(objTokens.length>0){
+                    R.obj=splitNP(objTokens);
+                    R.oc={head:'(ones)',mods:[ocTokens.join(' ')]};
+                    R.verbSub=isOcC?'간주동사':'비사역동사';
+                    R.modV.push(...prepPh); return;
+                }
+            }
         }
     }
 

@@ -523,10 +523,14 @@ document.addEventListener('keydown', function(e) {
 // ================================================================
 //  LanguageTool 맞춤법/문법 체크
 // ================================================================
+let _spellReqId = 0; // 레이스 컨디션 방지용 요청 카운터
+
 async function checkSpelling(text, keepOpen) {
     const container = document.getElementById('spell-area');
     if (!container) return;
     container.innerHTML = '';
+
+    const reqId = ++_spellReqId; // 현재 요청 ID
 
     try {
         const res = await fetch('https://api.languagetool.org/v2/check', {
@@ -534,8 +538,11 @@ async function checkSpelling(text, keepOpen) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `text=${encodeURIComponent(text)}&language=en-US`
         });
+        // 응답이 도착했을 때 이미 새 요청이 시작됐으면 무시
+        if (reqId !== _spellReqId) return;
         if (!res.ok) return;
         const data = await res.json();
+        if (reqId !== _spellReqId) return;
         if (!data.matches || data.matches.length === 0) return;
 
         const count = data.matches.length;
@@ -566,9 +573,13 @@ async function checkSpelling(text, keepOpen) {
 }
 
 function applyFix(orig, fix) {
+    // 현재 입력값에서 교체 (stale 데이터 방지)
     const inp = document.getElementById('inp');
-    inp.value = inp.value.replace(orig, fix);
-    // 분석만 다시 실행 (spell-area는 건드리지 않음)
+    const current = inp.value;
+    const updated = current.replace(orig, fix);
+    if (updated === current) return; // 교체 실패 시 무시
+    inp.value = updated;
+
     const v = inp.value.trim();
     if (!v) return;
     const { results, conjunctions } = parseMulti(v);
@@ -576,11 +587,8 @@ function applyFix(orig, fix) {
     else if (results.length > 1) renderMulti(results, conjunctions);
     saveToHistory(v);
     renderHistory();
-    // 기존 spell 목록에서 적용된 항목 제거 후 다시 체크 (펼침 유지)
     checkSpelling(v, true);
 }
-
-// go()에서 호출할 때는 keepOpen=false
 
 
 // ================================================================
