@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>양 번역기</title>
+    <title>공학영어 문장 분석기</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -13,8 +13,8 @@
     <div class="app">
         <!-- 헤더 -->
         <header class="header">
-            <h1 class="logo">양 번역기</h1>
-            <p class="tagline">Reed-Kellogg 구조도 · 5형식 분류</p>
+            <h1 class="logo">공학영어 문장 분석기</h1>
+            <p class="tagline">강광현 제작</p>
         </header>
 
         <!-- 입력 -->
@@ -35,6 +35,9 @@
             </div>
         </div>
 
+        <!-- 맞춤법/문법 체크 (결과 위) -->
+        <div id="spell-area"></div>
+
         <!-- 결과 -->
         <div id="result" class="result-area">
             <div class="empty-state">
@@ -45,8 +48,12 @@
             </div>
         </div>
 
+        <!-- 히스토리 -->
+        <div id="history-area"></div>
+
     </div>
 
+    <script src="https://unpkg.com/compromise"></script>
     <script src="parser.js"></script>
     <script src="renderer.js"></script>
     <script data-goatcounter="https://kgh-kang.goatcounter.com/count"
