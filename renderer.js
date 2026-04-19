@@ -554,7 +554,7 @@ async function checkSpelling(text, keepOpen) {
                 : `<span class="spell-orig">${esc(orig)}</span>`;
             return `<div class="spell-item">
                 <span class="spell-msg">${fix} <span class="spell-desc">${esc(m.message)}</span></span>
-                ${suggestion ? `<button class="spell-apply" onclick="applyFix('${esc(orig).replace(/'/g,"\\'")}','${esc(suggestion).replace(/'/g,"\\'")}')">적용</button>` : ''}
+                ${suggestion ? `<button class="spell-apply" onclick="applyFix(${m.offset},${m.length},'${esc(suggestion).replace(/'/g,"\\'")}')">적용</button>` : ''}
             </div>`;
         }).join('');
 
@@ -572,12 +572,12 @@ async function checkSpelling(text, keepOpen) {
     }
 }
 
-function applyFix(orig, fix) {
-    // 현재 입력값에서 교체 (stale 데이터 방지)
+function applyFix(offset, length, fix) {
+    // offset/length로 정확한 위치의 문자를 교체 (단순 replace는 첫 매치만 잡음)
     const inp = document.getElementById('inp');
     const current = inp.value;
-    const updated = current.replace(orig, fix);
-    if (updated === current) return; // 교체 실패 시 무시
+    const updated = current.substring(0, offset) + fix + current.substring(offset + length);
+    if (updated === current) return;
     inp.value = updated;
 
     const v = inp.value.trim();
