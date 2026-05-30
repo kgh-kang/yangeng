@@ -393,32 +393,26 @@ body::after {
 }
 
 .m-sep-v {
-    width: 2.5px;
+    width: 2px;
     background: var(--red);
-    min-height: 48px;
-    margin-top: -12px;
+    min-height: 44px;
     margin-bottom: -6px;
-    border-radius: 2px;
-    opacity: 0.85;
+    border-radius: 1px;
 }
 
 .m-sep-s {
-    width: 2.5px;
+    width: 2px;
     background: var(--red);
-    min-height: 36px;
-    margin-top: -4px;
-    margin-bottom: -12px;
+    min-height: 30px;
     transform: rotate(-25deg);
     transform-origin: bottom center;
-    border-radius: 2px;
-    opacity: 0.85;
+    border-radius: 1px;
 }
 
 .m-line {
-    height: 2.5px;
+    height: 2px;
     background: var(--red);
-    border-radius: 2px;
-    opacity: 0.8;
+    border-radius: 1px;
 }
 
 /* ===== Modifiers ===== */
@@ -436,11 +430,11 @@ body::after {
 }
 
 .mod-stem {
-    width: 1.5px;
+    width: 2px;
     height: 16px;
     background: var(--red);
     border-radius: 1px;
-    opacity: 0.4;
+    opacity: 0.65;
 }
 
 .mod-item {

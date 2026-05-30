@@ -318,7 +318,8 @@ function render(R) {
             if (!cell) return;
 
             const cellRect = cell.getBoundingClientRect();
-            const centerX = cellRect.left + cellRect.width / 2 - diagramLeft;
+            // 정수 px로 반올림 — 소수점 위치면 수식어 선(stem)이 흐릿하게 렌더됨
+            const centerX = Math.round(cellRect.left + cellRect.width / 2 - diagramLeft);
             col.style.left = centerX + 'px';
 
             // 높이 측정
@@ -493,7 +494,7 @@ function renderMulti(results, conjunctions) {
                 const cell = row.querySelector(`.m-cell[data-idx="${idx}"]`);
                 if (!cell) return;
                 const cellRect = cell.getBoundingClientRect();
-                col.style.left = (cellRect.left + cellRect.width / 2 - diagramLeft) + 'px';
+                col.style.left = Math.round(cellRect.left + cellRect.width / 2 - diagramLeft) + 'px';
             });
             let maxH = 0;
             mr.querySelectorAll('.mod-col').forEach(col => { if (col.offsetHeight > maxH) maxH = col.offsetHeight; });
@@ -578,8 +579,14 @@ async function checkSpelling(text, keepOpen) {
         if (reqId !== _spellReqId) return;
         if (!data.matches || data.matches.length === 0) return;
 
-        const count = data.matches.length;
-        const items = data.matches.map(m => {
+        // 대소문자(CASING) 규칙은 제외 — 문장 첫 글자 대문자, 'i → I' 등은 굳이 잡지 않음
+        const matches = data.matches.filter(m =>
+            !(m.rule && m.rule.category && m.rule.category.id === 'CASING')
+        );
+        if (matches.length === 0) return;
+
+        const count = matches.length;
+        const items = matches.map(m => {
             const orig = text.substring(m.offset, m.offset + m.length);
             const suggestion = m.replacements.length > 0 ? m.replacements[0].value : null;
             const fix = suggestion
