@@ -34,6 +34,55 @@ const AMBI_VERBS=new Set('dance dances danced sing sings sang sung fly flies fle
 // 일반 타동사 (3형식 전용) — 확장
 const TRANSITIVE=new Set('eat eats ate eaten drink drinks drank drunk play plays played read reads write writes wrote written study studies studied learn learns learned learnt use uses used open opens opened close closes closed start starts started stop stops stopped begin begins began begun finish finishes finished enjoy enjoys enjoyed love loves loved like likes liked hate hates hated need needs needed want wants wanted take takes took taken carry carries carried hold holds held catch catches caught hit hits break breaks broke broken build builds built cut cuts create creates created destroy destroys destroyed develop develops developed discuss discusses discussed explain explains explained improve improves improved include includes included involve involves involved meet meets met produce produces produced provide provides provided receive receives received remember remembers remembered serve serves served speak speaks spoke spoken spend spends spent support supports supported understand understands understood visit visits visited accept accepts accepted achieve achieves achieved choose chooses chose chosen describe describes described establish establishes established examine examines examined follow follows followed mention mentions mentioned obtain obtains obtained prepare prepares prepared raise raises raised suggest suggests suggested complete completes completed contain contains contained express expresses expressed manage manages managed represent represents represented solve solves solved review reviews reviewed analyze analyzes analyzed check checks checked test tests tested fix fixes fixed handle handles handled replace replaces replaced remove removes removed add adds added update updates updated submit submits submitted cancel cancels canceled confirm confirms confirmed share shares shared upload uploads uploaded download downloads downloaded install installs installed delete deletes deleted edit edits edited publish publishes published release releases released launch launches launched consider considers considered avoid avoids avoided attempt attempts attempted continue continues continued decide decides decided determine determines determined discover discovers discovered enjoy enjoys enjoyed expand expands expanded explore explores explored generate generates generated identify identifies identified indicate indicates indicated maintain maintains maintained observe observes observed perform performs performed prevent prevents prevented protect protects protected reduce reduces reduced report reports reported require requires required'.split(' '));
 
+// 보강 타동사 (DB 누락 흔한 타동사) — 句동사 어근 포함
+const EXTRA_TRANS=new Set('pull pulls pulled push pushes pushed pick picks picked turn turns turned'.split(' '));
+
+// ================================================================
+// 句동사(phrasal verb) — 동사+불변화사(particle)가 한 동사 (강의: take in, pull out 등)
+// 불변화사는 전치사와 형태가 같아 오판되기 쉬우므로 화이트리스트로 흡수한다.
+// ================================================================
+const PARTICLE=new Set('up down in out on off away back over around through along across forward apart aside ahead'.split(' '));
+const PHRASAL=new Set([
+ 'take in','take on','take up','take out','take off','take over','take down',
+ 'pull out','pull up','pull off','pull down','pull in',
+ 'pick up','pick out','pick on',
+ 'break down','break up','break out','break in','break off','break through',
+ 'carry out','carry on','carry off',
+ 'find out','figure out','work out','point out','hand out','hand in','fill out','fill in','sort out','rule out','spell out','map out','lay out','cross out','knock out','wipe out','single out',
+ 'give up','give out','give in','give back','give away',
+ 'turn on','turn off','turn out','turn up','turn down','turn over','turn in',
+ 'set up','set off','set out','set down',
+ 'put on','put off','put up','put down','put away','put forward',
+ 'bring up','bring in','bring out','bring about','bring back','bring down',
+ 'make up','make out','make over',
+ 'look up','look out','look over','look after','look for','look into',
+ 'come back','come up','come out','come in','come over','come across','come along','come down','come about',
+ 'go out','go up','go down','go on','go off','go over','go back','go away',
+ 'grow up','show up','stand up','sit down','wake up','get up','back up','start up','sign up','add up','end up','catch up','keep up','build up','clean up','warm up','speed up','split up','line up',
+ 'throw away','throw out','throw up',
+ 'drop off','drop out','hold on','hold up','hold back','move on','move out','run out','run away','pass out','pass away','log in','log out','sign in','plug in','check in','check out',
+ 'shut down','shut up','cut off','cut down','cut out','blow up','blow out','close down','tear down','write down','note down','slow down','calm down','settle down'
+]);
+// 동사 원형 후보 (s/es/ed/ing 역추적)
+function verbBases(w){
+    const l=w.toLowerCase(); const out=new Set([l]);
+    if(/[^s]s$/i.test(l)) out.add(l.slice(0,-1));
+    if(/es$/i.test(l)) out.add(l.slice(0,-2));
+    if(/ed$/i.test(l)){ out.add(l.slice(0,-2)); out.add(l.slice(0,-1)); if(l.length>4&&l[l.length-3]===l[l.length-4])out.add(l.slice(0,-3)); }
+    if(/ing$/i.test(l)){ let b=l.slice(0,-3); out.add(b); out.add(b+'e'); if(b.length>=3&&b[b.length-1]===b[b.length-2])out.add(b.slice(0,-1)); }
+    return [...out];
+}
+// verbWord 다음 particleWord가 句동사를 이루면 그 particle(정규화형) 반환, 아니면 null
+function phrasalParticle(verbWord, particleWord){
+    if(!particleWord) return null;
+    const p=particleWord.toLowerCase().replace(/[.,!?]+$/,'');
+    if(!PARTICLE.has(p)) return null;
+    for(const base of verbBases(verbWord)){
+        if(PHRASAL.has(base+' '+p)) return p;
+    }
+    return null;
+}
+
 const lo=w=>w.toLowerCase();
 
 // ================================================================
@@ -103,14 +152,25 @@ function isVerbOnly(w){
 }
 
 function isVInDB(l){
-    return BE.has(l)||AUX.has(l)||LINKING.has(l)||DITRANSITIVE.has(l)||OC_CONSIDER.has(l)||CAUSATIVE.has(l)||PERCEPTION.has(l)||INDUCTIVE.has(l)||OC_GENERAL.has(l)||INTRANS_ONLY.has(l)||TRANSITIVE.has(l)||AMBI_VERBS.has(l);
+    return BE.has(l)||AUX.has(l)||LINKING.has(l)||DITRANSITIVE.has(l)||OC_CONSIDER.has(l)||CAUSATIVE.has(l)||PERCEPTION.has(l)||INDUCTIVE.has(l)||OC_GENERAL.has(l)||INTRANS_ONLY.has(l)||TRANSITIVE.has(l)||AMBI_VERBS.has(l)||EXTRA_TRANS.has(l);
 }
 
 function isV(w){
     const l=lo(w);
     if(isVInDB(l)) return true;
-    // 동사 어미 패턴: ~ed(과거), ~es(3인칭)
-    if(/(?:ed|es)$/i.test(w)) return true;
+    // (1) 형태+DB 경로 우선: 어미를 벗긴 원형이 동사 DB에 있으면 동사로 확정.
+    //  ※ ~ed/~es/~s/~ing 를 무조건 동사로 보면 복수명사(stars)·과거분사 형용사가
+    //    동사로 새고, compromise 캐시 상태에 따라 결과가 비결정적으로 갈리는 버그가 난다.
+    //    그래서 어미 추측은 반드시 DB 확인을 통과해야 한다. (shining→shine 등은 여기서 잡힘)
+    if(/ed$/i.test(l)){
+        const b=l.slice(0,-2);
+        if(isVInDB(b)||isVInDB(b+'e')||isVInDB(l.slice(0,-1))) return true;
+        if(b.length>=2&&b[b.length-1]===b[b.length-2]&&isVInDB(b.slice(0,-1))) return true; // stopped→stop
+    }
+    if(/es$/i.test(l)){
+        const b=l.slice(0,-2);
+        if(isVInDB(b)||isVInDB(b+'e')||isVInDB(l.slice(0,-1))) return true;
+    }
     // ~s로 끝나는 단어: 원형이 동사 DB에 있으면 동사
     if(/[^s]s$/i.test(w)){
         const base=l.slice(0,-1);
@@ -124,12 +184,16 @@ function isV(w){
         if(base.length>=3&&base[base.length-1]===base[base.length-2]){
             if(isVInDB(base.slice(0,-1))) return true;
         }
-        // ~e 복원: making �� make
+        // ~e 복원: making → make
         if(isVInDB(base+'e')) return true;
     }
-    // NLP 폴백: 기존 DB에서 판별 불가 시 compromise.js로 확인
+    // (2) NLP 가드: 위 DB 경로에 안 걸린 단어를 compromise 태그로 최종 판정.
+    //  복수명사/형용사로만 태깅됐거나 -s로 끝나면 동사로 보지 않는다(오탐·비결정성 차단).
+    //  ※ -s로 끝나는 단어(복수명사 가능성)는 NLP 단독으로 동사 판정하지 않는다.
+    //    진짜 동사-s(runs, makes…)는 위 형태+DB 경로가 이미 잡는다.
     const tags=getNlpTags(l);
-    if(tags && tags.has('Verb')) return true;
+    if(tags && !tags.has('Verb') && (tags.has('Plural')||tags.has('Adjective')||tags.has('Noun'))) return false;
+    if(tags && tags.has('Verb') && !tags.has('Plural') && !tags.has('Noun') && !/s$/i.test(l)) return true;
     return false;
 }
 
@@ -394,11 +458,105 @@ function splitSentences(sentence){
     return {parts, conjunctions};
 }
 
-// 복수 문장 파서 — 분리 후 각각 분석
+// ================================================================
+// 복문(종속절) 분리 — 강의: "복문 = 주절 + 종속절(명사절/형용사절/부사절)"
+//  종속접속사/관계사/의문사로 종속절 경계를 찾아 주절과 분리한다.
+// ================================================================
+const SUB_CONJ=new Set('because while since although though if unless until when where after before as whereas whenever wherever once'.split(' '));
+const WH_NOUN=new Set('who whom what which when where why how whose'.split(' '));
+const REL=new Set('who whom whose which that where when'.split(' '));
+const NCONJ=new Set('that whether if'.split(' '));
+
+function splitComplex(sentence){
+    const orig=sentence.trim();
+    const rawWords=orig.replace(/[.?!]+$/,'').split(/\s+/).filter(w=>w);
+    if(rawWords.length<4) return null;
+    const lw=rawWords.map(w=>lo(w).replace(/[.,!?]/g,''));
+
+    // 주절 동사 위치(첫 본동사) 찾기
+    let mvi=-1;
+    for(let i=0;i<rawWords.length;i++){
+        if(i===0&&(PRO_S.has(lw[i])||ART.has(lw[i])||DEMO.has(lw[i]))) continue;
+        if(AUX.has(lw[i])||BE.has(lw[i])||(isV(rawWords[i])&&!isAdj(rawWords[i]))){ mvi=i; break; }
+    }
+    if(mvi<0) return null;
+
+    for(let i=mvi+1;i<rawWords.length;i++){
+        const w=lw[i];
+        const prevRaw=rawWords[i-1]||'';
+        const hasComma=prevRaw.endsWith(',');
+        const prevIsNoun=i>0 && isNoun(prevRaw.replace(/,$/,''));
+
+        // 형용사절(관계부사) when/where 가 선행명사 뒤(콤마 없음)
+        if((w==='when'||w==='where') && prevIsNoun && !hasComma){
+            return mk(rawWords,i,'형용사절',lw[i],prevRaw.replace(/,$/,''));
+        }
+        // 부사절: 종속접속사 (콤마 동반 또는 절 접속)
+        if(SUB_CONJ.has(w)){
+            return mk(rawWords,i,'부사절',lw[i],null);
+        }
+        // 명사절: that/whether/if 가 동사 바로 뒤(목적어 자리)
+        if(NCONJ.has(w) && i===mvi+1){
+            return mk(rawWords,i,'명사절',lw[i],null);
+        }
+        // 명사절(간접의문): 의문사가 동사 바로 뒤(목적어 자리)
+        if(WH_NOUN.has(w) && i===mvi+1){
+            return mk(rawWords,i,'명사절',lw[i],null);
+        }
+        // 형용사절(관계사): 관계대명사가 선행명사 뒤
+        if(REL.has(w) && i>mvi+1 && prevIsNoun){
+            return mk(rawWords,i,'형용사절',lw[i],prevRaw.replace(/,$/,''));
+        }
+    }
+    return null;
+}
+
+function mk(words,i,rel,conn,antecedent){
+    const mainText=words.slice(0,i).join(' ').replace(/,\s*$/,'').replace(/,$/,'').trim();
+    const subWords=words.slice(i);
+    const connLo=lo(conn).replace(/[.,!?]/g,'');
+    let subText;
+    if(rel==='명사절' && WH_NOUN.has(connLo)){
+        // 간접의문: 의문사를 절 성분으로 유지한 채 파싱 (who gave ... 등)
+        subText=subWords.join(' ').replace(/,/g,' ').trim();
+    } else if(rel==='형용사절'){
+        // 관계절: 관계사 제거 후 선행사를 주어로 복원해 파싱
+        subText=(antecedent?antecedent+' ':'')+subWords.slice(1).join(' ').replace(/,/g,' ').trim();
+    } else {
+        // 명사절(that/whether/if) · 부사절: 접속사 제거 후 절 파싱
+        subText=subWords.slice(1).join(' ').replace(/,/g,' ').trim();
+    }
+    return {mainText, subs:[{rel, conn:connLo, antecedent, text:subText, fullText:subWords.join(' ')}], nounObject: rel==='명사절'};
+}
+
+// 절 인식 파서: 복문이면 주절+종속절 분리해 분석, 아니면 단문 파싱
+function parseClauseAware(sentence){
+    const split=splitComplex(sentence);
+    if(!split) return parse(sentence);
+    let mainText=split.mainText;
+    // 명사절이 목적어인 경우, 주절에 더미 목적어를 넣어 3형식으로 인식시킨 뒤 라벨 치환
+    if(split.nounObject && mainText && !/\b(it|them|this|that)\s*$/i.test(mainText)){
+        mainText=mainText+' it';
+    }
+    const main=parse(mainText);
+    if(!main) return parse(sentence);
+    if(split.nounObject && main.obj && main.obj.head){
+        main.obj={head:'('+split.subs[0].conn+'…절)', mods:[]};
+    }
+    main.clauses=split.subs.map(sb=>{
+        const res=parse(sb.text);
+        return res?{relation:sb.rel, connector:sb.conn, antecedent:sb.antecedent, orig:sb.fullText, result:res}:null;
+    }).filter(Boolean);
+    if(!main.clauses.length) return parse(sentence);
+    main.orig=sentence.trim();
+    return main;
+}
+
+// 복수 문장 파서 — 분리 후 각각 분석 (각 절은 복문 인식)
 function parseMulti(sentence){
     const {parts, conjunctions}=splitSentences(sentence);
-    if(parts.length<=1) return {results:[parse(sentence)].filter(Boolean), conjunctions:[]};
-    return {results:parts.map(s=>parse(s)).filter(Boolean), conjunctions};
+    if(parts.length<=1) return {results:[parseClauseAware(sentence)].filter(Boolean), conjunctions:[]};
+    return {results:parts.map(s=>parseClauseAware(s)).filter(Boolean), conjunctions};
 }
 
 // 단문 파서
@@ -627,12 +785,17 @@ function parsePred(words,lw,vi,R){
     }
 
     // 본동사 처리 — 부사가 조동사와 본동사 사이에 올 수 있음 (have earnestly asked)
-    // 부사를 건너뛰고 본동사를 찾음
+    // 부사를 건너뛰고 본동사를 찾음. 단, 부사 뒤에 실제 본동사가 있을 때만 스킵.
+    // (be + 형용사겸부사 'fast/high/hard/well' 등은 보어이므로 먹지 않는다)
     let skippedAdv=[];
     if(idx<words.length&&parts.length>0&&isAdv(words[idx])){
-        // 조동사 뒤 부사 스킵
-        while(idx<words.length&&isAdv(words[idx])){
-            skippedAdv.push(words[idx]);idx++;
+        let peek=idx;
+        while(peek<words.length&&isAdv(words[peek])) peek++;
+        const followedByVerb = peek<words.length && isV(words[peek]) && !isAdj(words[peek]) && !ART.has(lw[peek]) && !PREP.has(lw[peek]);
+        if(followedByVerb){
+            while(idx<words.length&&isAdv(words[idx])){
+                skippedAdv.push(words[idx]);idx++;
+            }
         }
     }
 
@@ -666,13 +829,23 @@ function parsePred(words,lw,vi,R){
     // 스킵한 부사를 동사 수식어로 추가
     if(skippedAdv.length) R.modV.push(...skippedAdv);
 
+    // 句동사 흡수: 본동사 뒤 불변화사가 句동사를 이루면 동사구에 포함 (take in, pull out 등)
+    if(idx<words.length){
+        const vw=R.verb.split(' ').filter(x=>!AUX.has(lo(x))&&!BE.has(lo(x))&&lo(x)!=='not');
+        const headVerb=vw.length?vw[vw.length-1]:lo(R.verb.split(' ').pop());
+        const part=phrasalParticle(headVerb, words[idx]);
+        if(part){ R.verb+=' '+words[idx]; idx++; }
+    }
+
     parseRem(words,lw,idx,R);
 }
 
 function parseRem(words,lw,si,R){
     if(si>=words.length)return;
     const vParts=R.verb.split(' ');
-    const vb=lo(vParts[vParts.length-1]);
+    let vb=lo(vParts[vParts.length-1]);
+    // 句동사 불변화사가 동사구 끝에 있으면 그 앞 본동사를 동사핵으로 (take in → take)
+    if(PARTICLE.has(vb) && vParts.length>=2) vb=lo(vParts[vParts.length-2]);
     // 진행형에서는 ~ing 제거하고 원형으로 동사 분류 체크
     let vbBase=vb;
     if(vb.endsWith('ing')){

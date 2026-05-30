@@ -15,6 +15,11 @@
 - 문장 유형 인식: 평서문 / 의문문 / 명령문
 - 5형식 동사 세분류: 사역동사 / 지각동사 / 유도동사 / 비사역동사 / 간주동사
 - 수식어 자동 분리 (관사, 형용사, 부사, 전치사구)
+- **句동사(phrasal verb) 인식** — take in / pull out / pick up / break down 등 (불변화사 흡수)
+- **복문(종속절) 분석** — 명사절 / 형용사절 / 부사절 자동 분리 + 각 절의 형식 표시
+  - 명사절: that·whether·if·의문사가 목적어 자리 (I saw **that** ... / I know **who** ...)
+  - 형용사절: 관계사 + 선행사 (the stars **that** were shining)
+  - 부사절: 종속접속사 (..., **when** they were shining)
 
 ## 구조도 규칙
 
@@ -41,3 +46,18 @@ yangeng/
 ## 사용법
 
 `index.html`을 브라우저에서 열거나 GitHub Pages로 배포하면 됩니다.
+POS 태깅은 [compromise](https://github.com/spencermountain/compromise)를 CDN으로 로드합니다.
+
+## 개발 / 테스트
+
+파서 회귀 테스트는 Node에서 실제 앱과 동일하게 compromise를 주입해 실행합니다.
+
+```bash
+cd test
+npm install            # compromise 설치 (회귀 테스트 정확도용)
+node harness.js        # 강의 예문 회귀 → test/results.json
+node render_smoke.js   # 렌더러 복문 렌더 예외 검증
+```
+
+이론적 근거(강의 5형식↔한국어 동사유형 매핑, 종속절 3분류, Reed-Kellogg 작도 규칙)와
+작업 로그는 `docs/WORKLOG.md` 참고.

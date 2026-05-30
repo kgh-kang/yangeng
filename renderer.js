@@ -174,6 +174,38 @@ function copyResult() {
 // ================================================================
 let _lastResult = null;
 
+// ================================================================
+//  종속절(복문) 분석 패널 — 강의: 명사절/형용사절/부사절 + 각 절의 형식
+// ================================================================
+function renderClauses(R) {
+    if (!R.clauses || !R.clauses.length) return '';
+    const items = R.clauses.map(cl => {
+        const r = cl.result;
+        if (!r) return '';
+        let comp = [`<span class="tag tS">S</span> ${esc(r.sub.head)}`, `<span class="tag tV">V</span> ${esc(r.verb)}`];
+        if (r.comp.head) comp.push(`<span class="tag tC">S.C</span> ${esc(r.comp.head)}`);
+        if (r.io.head) comp.push(`<span class="tag tIO">I.O</span> ${esc(r.io.head)}`);
+        if (r.obj.head) comp.push(`<span class="tag tO">O</span> ${esc(r.obj.head)}`);
+        if (r.oc.head) comp.push(`<span class="tag tOC">O.C</span> ${esc(r.oc.head)}`);
+        if (r.modV.length) comp.push(`<span class="tag tM">M</span> ${r.modV.map(esc).join(', ')}`);
+        const ante = cl.antecedent ? ` <span class="clause-ante">선행사: ${esc(cl.antecedent)}</span>` : '';
+        return `
+            <div class="clause-item clause-${cl.relation}">
+                <div class="clause-head">
+                    <span class="clause-rel">${esc(cl.relation)}</span>
+                    <span class="clause-conn">${esc(cl.connector)}</span>
+                    <span class="r-badge badge-${r.type[0]}">${r.type} ${r.typeKo}</span>${ante}
+                </div>
+                <div class="clause-orig">${esc(cl.orig)}</div>
+                <div class="clause-detail">${comp.join(' &nbsp;·&nbsp; ')}</div>
+            </div>`;
+    }).join('');
+    return `<div class="clause-section">
+        <div class="clause-title">종속절 분석 <span class="clause-sub">복문 · 주절 + 종속절 ${R.clauses.length}개</span></div>
+        ${items}
+    </div>`;
+}
+
 function render(R) {
     _lastResult = R;
     const c = document.getElementById('result');
@@ -251,6 +283,7 @@ function render(R) {
                 </div>
             </div>
             <div class="r-explanation">${explanation}</div>
+            ${renderClauses(R)}
             <div class="r-detail">${det.join('<br>')}</div>
             <div class="r-actions">
                 <button id="copy-btn" class="btn-copy" data-copy-text="${esc(copyText).replace(/"/g, '&quot;')}" onclick="copyResult()">결과 복사</button>
