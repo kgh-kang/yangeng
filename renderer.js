@@ -579,10 +579,16 @@ async function checkSpelling(text, keepOpen) {
         if (reqId !== _spellReqId) return;
         if (!data.matches || data.matches.length === 0) return;
 
-        // 대소문자(CASING) 규칙은 제외 — 문장 첫 글자 대문자, 'i → I' 등은 굳이 잡지 않음
-        const matches = data.matches.filter(m =>
-            !(m.rule && m.rule.category && m.rule.category.id === 'CASING')
-        );
+        // 대소문자 규칙은 제외 — 문장 첫 글자 대문자, 'i → I' 등은 굳이 잡지 않음.
+        // ※ LanguageTool은 'i→I'를 CASING이 아니라 TYPOS/I_LOWERCASE 로 주므로 ruleId도 함께 본다.
+        const CASING_RULES = new Set(['I_LOWERCASE', 'UPPERCASE_SENTENCE_START']);
+        const matches = data.matches.filter(m => {
+            const rule = m.rule || {};
+            const cat = rule.category && rule.category.id;
+            if (cat === 'CASING') return false;
+            if (CASING_RULES.has(rule.id)) return false;
+            return true;
+        });
         if (matches.length === 0) return;
 
         const count = matches.length;
