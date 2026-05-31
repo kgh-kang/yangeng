@@ -395,15 +395,16 @@ body::after {
 .m-sep-v {
     width: 2px;
     background: var(--red);
-    min-height: 44px;
-    margin-bottom: -6px;
+    min-height: 40px;
+    margin-bottom: -2px;
     border-radius: 1px;
 }
 
 .m-sep-s {
     width: 2px;
     background: var(--red);
-    min-height: 30px;
+    min-height: 28px;
+    margin-bottom: 0;
     transform: rotate(-25deg);
     transform-origin: bottom center;
     border-radius: 1px;
