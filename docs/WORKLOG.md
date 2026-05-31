@@ -148,3 +148,19 @@ PDF 6개 소스 + YouTube 재생목록을 서브에이전트 병렬 분석. 핵�
 - 검증(예문 "No well-prepared boy scout troop would wander into the wilderness
   without a compass."): 받침대 2개(into→wilderness→\the, without→compass→\a),
   주어 수식어 \No \well-prepared \boy \scout 정상. 파서 21/21, CSS 172/172 균형.
+
+## 2026-05-31 — 구조도 SVG 전환 (세션 5)
+
+HTML border 기반 다이어그램은 픽셀 정렬이 계속 어긋나(수직선이 baseline 아래로
+삐져나오는 등) → **SVG 좌표 기반 렌더로 전면 전환**.
+- `renderer.js`: `buildDiagramSVG(R)` 신설. 텍스트 폭을 canvas `measureText`로
+  동기 측정해 셀 x좌표·구분선·받침대를 정확히 배치. 헬퍼: `_measure/_line/_txt/
+  _ppMetrics/_ppStandSVG/_modBlockSVG`.
+  · 구분선: S-V/V-O 전체관통선, 보어/OC 사선, 4형식 IO/O 반선.
+  · 전치사구 받침대: 전치사(세로다리)→명사(가로선)→관사(\사선) 계층을 SVG로.
+  · 단어 수식어: stem + \사선.
+- render()/renderMulti()의 옛 HTML 마크업(.m-cell/.m-sep/.mod-col)과
+  requestAnimationFrame 사후측정 블록 전부 제거 → SVG는 측정 불필요.
+- 부수 수정: 중문 상세줄 OC 라벨 'O:' → 'O.C:' 오타 수정.
+- 검증: 1~5형식·전치사구·중문 모두 svg 1개씩 정상 생성(line/text 좌표 OK, 예외 0),
+  파서 21/21, CSS 172/172.

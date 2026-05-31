@@ -71,6 +71,166 @@ function renderModV(modV) {
 }
 
 // ================================================================
+//  SVG Reed-Kellogg 다이어그램 — 좌표 기반(선 깨짐 없음)
+//   텍스트 폭은 canvas measureText로 동기 측정 → 선·텍스트를 정확히 정렬.
+// ================================================================
+const _FONT_STACK = '"Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif';
+const _FONT_MAIN = '500 22px ' + _FONT_STACK;
+const _FONT_MOD = '400 13px ' + _FONT_STACK;
+const _RK = {
+    line: '#C0504D',                        // 메인 빨강 선
+    S: '#4285f4', V: '#C0504D', O: '#34a853', IO: '#a142f4', OC: '#fa903e', C: '#4285f4',
+    mod: '#c8ccd2', restored: '#8a8f98',    // 수식어 텍스트(다크 배경 대비)
+};
+
+let _mCanvas = null;
+function _measure(text, font) {
+    text = text == null ? '' : String(text);
+    const fallback = () => text.length * (/22px/.test(font) ? 13.2 : 7.4);
+    try {
+        if (typeof document === 'undefined' || !document.createElement) return fallback();
+        if (!_mCanvas) _mCanvas = document.createElement('canvas');
+        const ctx = _mCanvas.getContext && _mCanvas.getContext('2d');
+        if (!ctx) return fallback();
+        ctx.font = font;
+        return ctx.measureText(text).width;
+    } catch (e) {
+        return fallback();
+    }
+}
+
+function _sx(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function _line(x1, y1, x2, y2, w) {
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${_RK.line}" stroke-width="${w || 2}" stroke-linecap="round"/>`;
+}
+function _txt(x, y, t, size, fill, italic) {
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" fill="${fill}"${italic ? ' font-style="italic"' : ''}>${_sx(t)}</text>`;
+}
+
+// 전치사구 한 줄 메트릭 (받침대 폭)
+function _ppMetrics(pp) {
+    const parts = pp.trim().split(/\s+/);
+    const prep = parts[0];
+    const np = _splitNPstr(parts.slice(1));
+    const prepW = _measure(prep, _FONT_MOD);
+    const nounW = _measure(np.head, _FONT_MOD);
+    const modW = (np.mods && np.mods.length) ? Math.max.apply(null, np.mods.map(m => _measure(m, _FONT_MOD))) : 0;
+    const width = Math.max(8 + prepW + 12, 22 + nounW, 48 + modW) + 6;
+    return { prep, np, prepW, width };
+}
+
+// 수식어 1개의 렌더 폭
+function _modItemW(m) {
+    if (_isPrepPhrase(m)) return _ppMetrics(m).width;
+    return 16 + _measure(m, _FONT_MOD);
+}
+
+// 전치사구 받침대 SVG (left, top 기준) → {svg, height}
+function _ppStandSVG(pp, left, top) {
+    const m = _ppMetrics(pp);
+    let svg = '';
+    const prepBaseY = top + 15;
+    const underY = prepBaseY + 5;
+    svg += _line(left, top, left, underY);                              // 세로 다리
+    svg += _txt(left + 8, prepBaseY, m.prep, 13, _RK.mod);             // 전치사
+    svg += _line(left, underY, left + Math.max(m.prepW + 14, 46), underY); // 명사 받침 가로선
+    const nounBaseY = underY + 20;
+    svg += _txt(left + 20, nounBaseY, m.np.head, 13, _RK.mod);         // 목적어 명사
+    let y = nounBaseY;
+    (m.np.mods || []).forEach(mm => {
+        y += 19;
+        svg += _line(left + 34, y - 11, left + 43, y - 2);             // \ 사선
+        svg += _txt(left + 47, y, mm, 12, _RK.restored);
+    });
+    return { svg, height: (y - top) + 10 };
+}
+
+// cell 아래 수식어 블록 (cx 중심) → {svg, height}
+function _modBlockSVG(mods, cx, startY) {
+    if (!mods || !mods.length) return { svg: '', height: 0 };
+    const blockW = Math.max.apply(null, mods.map(_modItemW));
+    const left = cx - blockW / 2;
+    let y = startY, svg = '';
+    mods.forEach(m => {
+        if (_isPrepPhrase(m)) {
+            const r = _ppStandSVG(m, left, y);
+            svg += r.svg; y += r.height;
+        } else {
+            const restored = m.startsWith('(');
+            svg += _line(left, y + 4, left + 9, y + 14);              // \ 사선
+            svg += _txt(left + 14, y + 15, m, 13, restored ? _RK.restored : _RK.mod, restored);
+            y += 22;
+        }
+    });
+    return { svg, height: y - startY };
+}
+
+// 메인 다이어그램 SVG 생성
+function buildDiagramSVG(R) {
+    const PADX = 22, TOP = 16, STEM = 14;
+    const mk = (key, np, color) => ({
+        key, text: np.head, color,
+        restored: String(np.head).startsWith('('),
+        mods: np.mods || []
+    });
+
+    // 1) 셀 + 셀 사이 구분자(sepAfter) 구성
+    const cells = [];
+    const sub = mk('S', R.sub, _RK.S);
+    const verb = { key: 'V', text: R.verb, color: _RK.V, restored: false, mods: R.modV || [] };
+    sub.sepAfter = 'through';
+    cells.push(sub, verb);
+    if (R.type === '2형식') { verb.sepAfter = 'slash'; cells.push(mk('C', R.comp, _RK.C)); }
+    else if (R.type === '3형식') { verb.sepAfter = 'half'; cells.push(mk('O', R.obj, _RK.O)); }
+    else if (R.type === '4형식') { verb.sepAfter = 'half'; const io = mk('IO', R.io, _RK.IO); io.sepAfter = 'half'; cells.push(io, mk('O', R.obj, _RK.O)); }
+    else if (R.type === '5형식') { verb.sepAfter = 'half'; const o = mk('O', R.obj, _RK.O); o.sepAfter = 'slash'; cells.push(o, mk('OC', R.oc, _RK.OC)); }
+
+    // 2) 셀 폭(헤드 vs 수식어 블록 중 큰 쪽) + x 좌표
+    cells.forEach(c => {
+        c.headW = _measure(c.text, _FONT_MAIN);
+        c.modW = (c.mods && c.mods.length) ? Math.max.apply(null, c.mods.map(_modItemW)) : 0;
+        c.cellW = Math.max(c.headW, c.modW) + PADX * 2;
+    });
+    let x = 0;
+    cells.forEach(c => { c.x = x; c.cx = x + c.cellW / 2; x += c.cellW; });
+    const mainW = x;
+
+    const textBaseY = TOP + 24;     // 메인 단어 baseline
+    const lineY = textBaseY + 8;    // 메인 가로선
+    const textTop = TOP - 4;        // 구분자 상단
+
+    let parts = [];
+    // 메인 baseline
+    parts.push(_line(0, lineY, mainW, lineY));
+    // 셀 텍스트
+    cells.forEach(c => {
+        const fill = c.restored ? _RK.restored : c.color;
+        parts.push(`<text x="${c.cx.toFixed(1)}" y="${textBaseY}" text-anchor="middle" font-size="22" font-weight="500" fill="${fill}"${c.restored ? ' font-style="italic"' : ''}>${_sx(c.text)}</text>`);
+    });
+    // 구분자
+    cells.forEach((c, i) => {
+        if (!c.sepAfter || !cells[i + 1]) return;
+        const bx = cells[i + 1].x;
+        if (c.sepAfter === 'through') parts.push(_line(bx, textTop, bx, lineY + 12, 2.5));
+        else if (c.sepAfter === 'half') parts.push(_line(bx, textTop, bx, lineY, 2.5));
+        else if (c.sepAfter === 'slash') parts.push(_line(bx, lineY, bx + 22, textTop, 2.5)); // 보어 / 사선
+    });
+    // 수식어 블록
+    let maxBottom = lineY;
+    cells.forEach(c => {
+        if (!c.mods || !c.mods.length) return;
+        parts.push(_line(c.cx, lineY, c.cx, lineY + STEM));   // stem
+        const blk = _modBlockSVG(c.mods, c.cx, lineY + STEM);
+        parts.push(blk.svg);
+        const bottom = lineY + STEM + blk.height;
+        if (bottom > maxBottom) maxBottom = bottom;
+    });
+
+    const W = Math.ceil(mainW + 4), H = Math.ceil(maxBottom + 10);
+    return `<svg class="rk-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family='${_FONT_STACK}'>${parts.join('')}</svg>`;
+}
+
+// ================================================================
 //  교수님 스타일 해설 생성
 // ================================================================
 function getTypeExplanation(R) {
@@ -251,41 +411,7 @@ function render(R) {
     const c = document.getElementById('result');
     _cellIdx = 0; // reset
 
-    let cells = '', modCols = '';
-    const subCls = R.sub.head.startsWith('(') ? ' restored' : '';
-
-    // S | V (항상) — data-idx matches mod-col data-cell
-    cells += `<div class="m-cell" data-idx="0"><div class="m-word${subCls ? ' ' + subCls : ''}">${esc(R.sub.head)}</div></div>`;
-    cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-    cells += `<div class="m-cell" data-idx="1"><div class="m-word verb-color">${esc(R.verb)}</div></div>`;
-
-    let modSub = renderModCol(R.sub);   // data-cell="0"
-    let modVerb = renderModV(R.modV);   // data-cell="1"
-
-    if (R.type === '2형식') {
-        cells += `<div class="m-sep"><div class="m-sep-s"></div></div>`;
-        const cc = R.comp.head.startsWith('(') ? ' restored' : '';
-        cells += `<div class="m-cell" data-idx="2"><div class="m-word${cc ? ' ' + cc : ''}">${esc(R.comp.head)}</div></div>`;
-        modCols = modSub + modVerb + renderModCol(R.comp);
-    } else if (R.type === '3형식') {
-        cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-        cells += `<div class="m-cell" data-idx="2"><div class="m-word obj-color">${esc(R.obj.head)}</div></div>`;
-        modCols = modSub + modVerb + renderModCol(R.obj);
-    } else if (R.type === '4형식') {
-        cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-        cells += `<div class="m-cell" data-idx="2"><div class="m-word io-color">${esc(R.io.head)}</div></div>`;
-        cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-        cells += `<div class="m-cell" data-idx="3"><div class="m-word obj-color">${esc(R.obj.head)}</div></div>`;
-        modCols = modSub + modVerb + renderModCol(R.io) + renderModCol(R.obj);
-    } else if (R.type === '5형식') {
-        cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-        cells += `<div class="m-cell" data-idx="2"><div class="m-word obj-color">${esc(R.obj.head)}</div></div>`;
-        cells += `<div class="m-sep"><div class="m-sep-s"></div></div>`;
-        cells += `<div class="m-cell" data-idx="3"><div class="m-word oc-color">${esc(R.oc.head)}</div></div>`;
-        modCols = modSub + modVerb + renderModCol(R.obj) + renderModCol(R.oc);
-    } else {
-        modCols = modSub + modVerb;
-    }
+    const diagramSVG = buildDiagramSVG(R);
 
     let verbInfo = R.verbSub ? ` · ${R.verbSub}` : '';
     const roles = getRoleDescriptions();
@@ -316,11 +442,7 @@ function render(R) {
             <div class="r-translation" id="translation-area"><span class="translation-loading">번역 중...</span></div>
             ${R.warnings && R.warnings.length ? R.warnings.map(w => `<div class="r-warning"><span class="warn-icon">⚠</span> ${esc(w)}</div>`).join('') : ''}
             <div class="r-diagram-wrap">
-                <div class="r-diagram">
-                    <div class="main-row">${cells}</div>
-                    <div class="m-line" id="ml"></div>
-                    <div class="mod-row" id="mr">${modCols}</div>
-                </div>
+                <div class="r-diagram">${diagramSVG}</div>
             </div>
             <div class="r-explanation">${explanation}</div>
             ${renderClauses(R)}
@@ -519,30 +641,7 @@ function renderMulti(results, conjunctions) {
     c.setAttribute('tabindex', '-1');
     c.focus({ preventScroll: true });
 
-    requestAnimationFrame(() => {
-        results.forEach((R, i) => {
-            const row = document.querySelector(`#diagram-${i} .main-row`);
-            const ml = document.getElementById(`ml-${i}`);
-            const mr = document.getElementById(`mr-${i}`);
-            if (!row || !ml) return;
-            ml.style.width = row.offsetWidth + 'px';
-            if (!mr) return;
-            mr.style.width = row.offsetWidth + 'px';
-            const diagramLeft = row.getBoundingClientRect().left;
-            mr.querySelectorAll('.mod-col[data-cell]').forEach(col => {
-                const idx = col.getAttribute('data-cell');
-                const cell = row.querySelector(`.m-cell[data-idx="${idx}"]`);
-                if (!cell) return;
-                const cellRect = cell.getBoundingClientRect();
-                col.style.left = Math.round(cellRect.left + cellRect.width / 2 - diagramLeft) + 'px';
-            });
-            let maxH = 0;
-            mr.querySelectorAll('.mod-col').forEach(col => { if (col.offsetHeight > maxH) maxH = col.offsetHeight; });
-            mr.style.minHeight = maxH + 'px';
-        });
-    });
-
-    // 비동기 번역 — 각 절 개별 번역
+    // 비동기 번역 — 각 절 개별 번역 (SVG는 사후 측정 불필요)
     translateMulti(results.map(R => R.orig));
 }
 
