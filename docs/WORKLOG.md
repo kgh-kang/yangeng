@@ -164,3 +164,13 @@ HTML border 기반 다이어그램은 픽셀 정렬이 계속 어긋나(수직�
 - 부수 수정: 중문 상세줄 OC 라벨 'O:' → 'O.C:' 오타 수정.
 - 검증: 1~5형식·전치사구·중문 모두 svg 1개씩 정상 생성(line/text 좌표 OK, 예외 0),
   파서 21/21, CSS 172/172.
+
+## 2026-05-31 — 종속절 SVG 색 테마 (세션 7)
+
+복문 종속절도 교재처럼 다이어그램으로(주절=빨강과 구분되게 검정):
+- `buildDiagramSVG(R, opts)`: `opts.mainColor`로 메인 baseline·구분선 색 지정.
+  주절은 빨강(_RK.line, 기본), 종속절은 검정(_RK.sub) 전달.
+- `renderClauses()`: 각 종속절을 `buildDiagramSVG(r, {mainColor:_RK.sub})`로 그려
+  카드 안에 검정 SVG 다이어그램 표시. `style.css`에 `.clause-diagram` 추가.
+- 검증("I saw the stars that were shining in the sky"): 종속절 패널 SVG 검정선 11·
+  빨강선 0, 주절 메인 빨강선 2. 파서 21/21, CSS 172/172, 렌더 무예외.

@@ -169,7 +169,9 @@ function _modBlockSVG(mods, cx, startY) {
 }
 
 // 메인 다이어그램 SVG 생성
-function buildDiagramSVG(R) {
+//  opts.mainColor: 메인 baseline·구분선 색. 주절=빨강(_RK.line, 기본) / 종속절=검정(_RK.sub).
+function buildDiagramSVG(R, opts) {
+    const MC = (opts && opts.mainColor) || _RK.line;   // 메인선 색(주절 빨강 / 종속절 검정)
     const PADX = 22, TOP = 16, STEM = 14;
     const mk = (key, np, color) => ({
         key, text: np.head, color,
@@ -203,20 +205,20 @@ function buildDiagramSVG(R) {
     const textTop = TOP - 4;        // 구분자 상단
 
     let parts = [];
-    // 메인 baseline
-    parts.push(_line(0, lineY, mainW, lineY));
+    // 메인 baseline (주절 빨강 / 종속절 검정)
+    parts.push(_line(0, lineY, mainW, lineY, 2, MC));
     // 셀 텍스트
     cells.forEach(c => {
         const fill = c.restored ? _RK.restored : c.color;
         parts.push(`<text x="${c.cx.toFixed(1)}" y="${textBaseY}" text-anchor="middle" font-size="22" font-weight="500" fill="${fill}"${c.restored ? ' font-style="italic"' : ''}>${_sx(c.text)}</text>`);
     });
-    // 구분자
+    // 구분자 (메인선 색 따름)
     cells.forEach((c, i) => {
         if (!c.sepAfter || !cells[i + 1]) return;
         const bx = cells[i + 1].x;
-        if (c.sepAfter === 'through') parts.push(_line(bx, textTop, bx, lineY + 12, 2.5));
-        else if (c.sepAfter === 'half') parts.push(_line(bx, textTop, bx, lineY, 2.5));
-        else if (c.sepAfter === 'slash') parts.push(_line(bx, lineY, bx + 22, textTop, 2.5)); // 보어 / 사선
+        if (c.sepAfter === 'through') parts.push(_line(bx, textTop, bx, lineY + 12, 2.5, MC));
+        else if (c.sepAfter === 'half') parts.push(_line(bx, textTop, bx, lineY, 2.5, MC));
+        else if (c.sepAfter === 'slash') parts.push(_line(bx, lineY, bx + 22, textTop, 2.5, MC)); // 보어 / 사선
     });
     // 수식어 블록
     let maxBottom = lineY;
@@ -392,6 +394,9 @@ function renderClauses(R) {
         if (r.oc.head) comp.push(`<span class="tag tOC">O.C</span> ${esc(r.oc.head)}`);
         if (r.modV.length) comp.push(`<span class="tag tM">M</span> ${r.modV.map(esc).join(', ')}`);
         const ante = cl.antecedent ? ` <span class="clause-ante">선행사: ${esc(cl.antecedent)}</span>` : '';
+        // 종속절은 검정 테마 SVG 다이어그램으로 (주절=빨강과 구분)
+        let clauseSVG = '';
+        try { clauseSVG = buildDiagramSVG(r, { mainColor: _RK.sub }); } catch (e) { clauseSVG = ''; }
         return `
             <div class="clause-item clause-${cl.relation}">
                 <div class="clause-head">
@@ -400,6 +405,7 @@ function renderClauses(R) {
                     <span class="r-badge badge-${r.type[0]}">${r.type} ${r.typeKo}</span>${ante}
                 </div>
                 <div class="clause-orig">${esc(cl.orig)}</div>
+                ${clauseSVG ? `<div class="clause-diagram">${clauseSVG}</div>` : ''}
                 <div class="clause-detail">${comp.join(' &nbsp;·&nbsp; ')}</div>
             </div>`;
     }).join('');
