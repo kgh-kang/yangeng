@@ -829,6 +829,9 @@ body::after {
 }
 
 .clause-section { padding-top: 4px; }
+/* 종속절 SVG 다이어그램(검정 테마) */
+.clause-diagram { margin: 4px 0 10px; overflow-x: auto; }
+.clause-diagram .rk-svg { display: block; }
 
 .clause-header {
     display: flex;
