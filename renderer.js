@@ -457,49 +457,7 @@ function render(R) {
     c.setAttribute('tabindex', '-1');
     c.focus({ preventScroll: true });
 
-    requestAnimationFrame(() => {
-        const row = document.querySelector('.main-row');
-        const ml = document.getElementById('ml');
-        const mr = document.getElementById('mr');
-        if (!row || !ml) return;
-
-        const w = row.offsetWidth;
-        ml.style.width = w + 'px';
-
-        if (!mr) return;
-        mr.style.width = w + 'px';
-
-        // mod-col을 대응하는 m-cell 정중앙에 배치
-        const diagramLeft = row.getBoundingClientRect().left;
-        const modCols = mr.querySelectorAll('.mod-col[data-cell]');
-        let maxBottom = 0;
-
-        modCols.forEach(col => {
-            const idx = col.getAttribute('data-cell');
-            const cell = row.querySelector(`.m-cell[data-idx="${idx}"]`);
-            if (!cell) return;
-
-            const cellRect = cell.getBoundingClientRect();
-            // 정수 px로 반올림 — 소수점 위치면 수식어 선(stem)이 흐릿하게 렌더됨
-            const centerX = Math.round(cellRect.left + cellRect.width / 2 - diagramLeft);
-            col.style.left = centerX + 'px';
-
-            // 높이 측정
-            const h = col.offsetHeight;
-            if (h > maxBottom) maxBottom = h;
-        });
-
-        mr.style.minHeight = maxBottom + 'px';
-
-        // 긴 문장: 다이어그램 래핑 스크롤 보정
-        const wrap = document.querySelector('.r-diagram-wrap');
-        if (wrap && row.scrollWidth > wrap.clientWidth) {
-            wrap.style.overflowX = 'auto';
-            wrap.style.webkitOverflowScrolling = 'touch';
-        }
-    });
-
-    // 비동기 번역
+    // 비동기 번역 (SVG는 좌표 기반이라 사후 측정 불필요)
     translateText(R.orig);
 }
 
@@ -546,60 +504,15 @@ function renderMulti(results, conjunctions) {
         </div>`;
     }).join('');
 
-    // 다이어그램 영역: 각 절의 다이어그램을 가로로 나란히 + 접속사
+    // 다이어그램 영역: 각 절의 SVG 다이어그램을 가로로 나란히 + 접속사
     let diagramPanels = '';
     results.forEach((R, i) => {
-        _cellIdx = 0; // 각 절마다 0부터 시작 (절별 diagram 내부에서만 사용)
-        let cells = '', modCols = '';
-        const subCls = R.sub.head.startsWith('(') ? ' restored' : '';
-
-        // S cell: data-idx="0"
-        cells += `<div class="m-cell" data-idx="0"><div class="m-word${subCls ? ' ' + subCls : ''}">${esc(R.sub.head)}</div></div>`;
-        cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-        // V cell: data-idx="1"
-        cells += `<div class="m-cell" data-idx="1"><div class="m-word verb-color">${esc(R.verb)}</div></div>`;
-
-        // renderModCol/renderModV use _cellIdx++ internally
-        // so data-cell will be 0, 1, 2, ... matching data-idx
-        let modSub = renderModCol(R.sub);   // data-cell="0"
-        let modVerb = renderModV(R.modV);   // data-cell="1"
-
-        if (R.type === '2형식') {
-            cells += `<div class="m-sep"><div class="m-sep-s"></div></div>`;
-            const cc = R.comp.head.startsWith('(') ? ' restored' : '';
-            cells += `<div class="m-cell" data-idx="2"><div class="m-word${cc ? ' ' + cc : ''}">${esc(R.comp.head)}</div></div>`;
-            modCols = modSub + modVerb + renderModCol(R.comp); // data-cell="2"
-        } else if (R.type === '3형식') {
-            cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-            cells += `<div class="m-cell" data-idx="2"><div class="m-word obj-color">${esc(R.obj.head)}</div></div>`;
-            modCols = modSub + modVerb + renderModCol(R.obj); // data-cell="2"
-        } else if (R.type === '4형식') {
-            cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-            cells += `<div class="m-cell" data-idx="2"><div class="m-word io-color">${esc(R.io.head)}</div></div>`;
-            cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-            cells += `<div class="m-cell" data-idx="3"><div class="m-word obj-color">${esc(R.obj.head)}</div></div>`;
-            modCols = modSub + modVerb + renderModCol(R.io) + renderModCol(R.obj); // data-cell="2","3"
-        } else if (R.type === '5형식') {
-            cells += `<div class="m-sep"><div class="m-sep-v"></div></div>`;
-            cells += `<div class="m-cell" data-idx="2"><div class="m-word obj-color">${esc(R.obj.head)}</div></div>`;
-            cells += `<div class="m-sep"><div class="m-sep-s"></div></div>`;
-            cells += `<div class="m-cell" data-idx="3"><div class="m-word oc-color">${esc(R.oc.head)}</div></div>`;
-            modCols = modSub + modVerb + renderModCol(R.obj) + renderModCol(R.oc); // data-cell="2","3"
-        } else {
-            modCols = modSub + modVerb;
-        }
-
         // 접속사 표시 (이전 절과 현재 절 사이)
         if (i > 0 && conjunctions[i - 1]) {
             diagramPanels += `<div class="multi-conj"><span class="conj-word">${esc(conjunctions[i - 1])}</span></div>`;
         }
-
         diagramPanels += `<div class="multi-diagram-panel" id="panel-${i}">
-            <div class="r-diagram" id="diagram-${i}">
-                <div class="main-row">${cells}</div>
-                <div class="m-line" id="ml-${i}"></div>
-                <div class="mod-row" id="mr-${i}">${modCols}</div>
-            </div>
+            <div class="r-diagram" id="diagram-${i}">${buildDiagramSVG(R)}</div>
         </div>`;
     });
 
