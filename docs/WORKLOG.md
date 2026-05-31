@@ -101,6 +101,28 @@ PDF 6개 소스 + YouTube 재생목록을 서브에이전트 병렬 분석. 핵�
 ### 남은 과제(차기)
 - of 4분류 의미 라벨, will/shall 의지 해설, 종속절 중첩(절 안의 절), 관계사 목적격 복원, 상관접속사(both A and B) 병렬, 의문문 do-support 환원 표시.
 
+---
+
+## 2026-05-30~31 — UI 피드백 (세션 2~4)
+
+### 맞춤법: 대소문자 지적 제외
+- LanguageTool 결과에서 대소문자 규칙 제외. 단, "i → I"는 카테고리가 `CASING`이 아니라
+  **`TYPOS` / ruleId `I_LOWERCASE`** 로 내려옴(실 API 확인) → ruleId 기준 제외 추가
+  (`I_LOWERCASE`, `UPPERCASE_SENTENCE_START`). 첫 글자 대문자·인칭대명사 대문자 안 잡음.
+
+### 구조도 선 가독성
+- 구분선을 어긋나게 하던 음수 margin 정리(`.m-sep-v` margin-bottom -2px, `.m-sep-s` 0),
+  흐릿하던 opacity 보정(구분선 불투명화, `.mod-stem` 0.65), 두께 2px 통일.
+- 수식어 컬럼 위치 `Math.round`로 정수 px 반올림(소수점 좌표로 흐릿하던 선 개선).
+
+### 전치사구 받침대(계층) 작도
+- 강의 Reed-Kellogg처럼 전치사구를 **전치사(다리) → 명사(가로선) → 관사·형용사(아래 매달기)**
+  계층 받침대로 렌더(`renderer.js` renderPrepStand/renderOneMod, `style.css` `.pp-*`/`.mod-slash`).
+- 검증 예문 "No well-prepared boy scout troop would wander into the wilderness without a compass.":
+  받침대 2개(into→wilderness→the, without→compass→a) + 주어 단어수식어 4개 사선 정상. 파서 21/21.
+
+> ⚠️ 이 구간 작업 중 style.css를 잘못 편집해 손상시킨 사고가 두어 번 있었으나 매번 원본 기준 복구 후 최소 변경만 재적용. WORKLOG 세션2~3 상세 로그는 amend/복구 과정에서 유실되어 본 항목으로 통합 기록함.
+
 ## 2026-05-30 — UI 피드백 반영 (세션 2)
 
 ### 맞춤법: 대소문자 규칙 제외
@@ -114,3 +136,15 @@ PDF 6개 소스 + YouTube 재생목록을 서브에이전트 병렬 분석. 핵�
 - 검증: renderer 스모크 무예외, 파서 회귀 21/21 유지, CSS 중괄호 균형(178/178)·셀렉터 단일 정의 확인.
 
 > ⚠️ 작업 중 style.css splice 실수로 spell-check 스타일을 한 번 날리고 다이어그램을 중복시킨 사고가 있었음. 원본(`7436666:style.css`)을 기준으로 복구한 뒤 위 변경만 재적용해 해결. (교훈: CSS 대량 편집은 원본 기준 복구가 안전)
+
+## 2026-05-31 — 전치사구 받침대(계층) 작도 (세션 4)
+
+강의 표준 Reed-Kellogg처럼 전치사구를 "꺾인 받침대" 계층으로 렌더:
+- `renderer.js`: `renderPrepStand()`/`renderOneMod()` 추가. 수식어 중 전치사구
+  (into the wilderness 등)는 `전치사(다리) → 명사(가로선) → \관사·형용사(매달기)`
+  계층으로, 일반 단어 수식어는 `\ 단어` 사선 표기로 렌더.
+- `style.css`: `.pp-stand/.pp-prep/.pp-obj/.pp-noun/.pp-objmods/.pp-objmod` +
+  `.mod-slash` 추가(빨강 다리·가로선, `\` 마커).
+- 검증(예문 "No well-prepared boy scout troop would wander into the wilderness
+  without a compass."): 받침대 2개(into→wilderness→\the, without→compass→\a),
+  주어 수식어 \No \well-prepared \boy \scout 정상. 파서 21/21, CSS 172/172 균형.

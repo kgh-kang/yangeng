@@ -10,23 +10,63 @@ function esc(t) {
 
 let _cellIdx = 0;
 
+// ================================================================
+//  수식어 렌더 — 강의 Reed-Kellogg 표기
+//   · 단어 수식어(관사/형용사/부사)  → "\ 단어" (사선 매달기)
+//   · 전치사구(into the wilderness)  → 전치사 → 명사 → \관사 의 꺾인 받침대(계층)
+// ================================================================
+
+// 전역(parser.js) PREP 집합 사용. 없으면 폴백.
+const _PREP = (typeof PREP !== 'undefined') ? PREP : new Set(
+    'in on at to for with by from of about into through during before after above below between under over up down out off near around against along across behind beside beyond among upon within without toward towards until since except like unlike despite throughout'.split(' '));
+
+function _isPrepPhrase(m) {
+    const w = m.trim().split(/\s+/)[0];
+    return _PREP.has(w.toLowerCase());
+}
+
+// 명사구 문자열 → {head, mods}. parser의 splitNP가 있으면 사용.
+function _splitNPstr(words) {
+    if (typeof splitNP === 'function') return splitNP(words);
+    if (!words.length) return { head: '', mods: [] };
+    return { head: words[words.length - 1], mods: words.slice(0, -1) };
+}
+
+// 전치사구 받침대 HTML: 전치사(다리) → 목적어 명사(가로선) → \관사·형용사(아래 매달기)
+function renderPrepStand(pp) {
+    const words = pp.trim().split(/\s+/);
+    const prep = words[0];
+    const np = _splitNPstr(words.slice(1));
+    const objMods = (np.mods || []).map(x =>
+        `<div class="pp-objmod">${esc(x)}</div>`).join('');
+    return `<div class="pp-stand">
+        <div class="pp-prep">${esc(prep)}</div>
+        <div class="pp-obj">
+            <div class="pp-noun">${esc(np.head)}</div>
+            ${objMods ? `<div class="pp-objmods">${objMods}</div>` : ''}
+        </div>
+    </div>`;
+}
+
+// 수식어 1개 → HTML (전치사구면 받침대, 아니면 \단어)
+function renderOneMod(m) {
+    if (_isPrepPhrase(m)) return renderPrepStand(m);
+    const restored = m.startsWith('(');
+    return `<div class="mod-item"><span class="mod-slash">\\</span><span class="mod-text${restored ? ' restored' : ''}">${esc(m)}</span></div>`;
+}
+
 function renderModCol(np) {
     let idx = _cellIdx++;
     let mods = np.mods ? [...np.mods] : [];
     if (!mods.length) return `<div class="mod-col" data-cell="${idx}"></div>`;
-    let items = mods.map(m => {
-        const cls = m.startsWith('(') ? ' restored' : '';
-        return `<div class="mod-item"><span class="mod-text${cls}">${esc(m)}</span></div>`;
-    }).join('');
+    let items = mods.map(renderOneMod).join('');
     return `<div class="mod-col" data-cell="${idx}"><div class="mod-stem"></div>${items}</div>`;
 }
 
 function renderModV(modV) {
     let idx = _cellIdx++;
     if (!modV.length) return `<div class="mod-col" data-cell="${idx}"></div>`;
-    let items = modV.map(m =>
-        `<div class="mod-item"><span class="mod-text">${esc(m)}</span></div>`
-    ).join('');
+    let items = modV.map(renderOneMod).join('');
     return `<div class="mod-col" data-cell="${idx}"><div class="mod-stem"></div>${items}</div>`;
 }
 
