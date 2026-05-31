@@ -78,7 +78,8 @@ const _FONT_STACK = '"Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI
 const _FONT_MAIN = '500 22px ' + _FONT_STACK;
 const _FONT_MOD = '400 13px ' + _FONT_STACK;
 const _RK = {
-    line: '#C0504D',                        // 메인 빨강 선
+    line: '#C0504D',                        // 주절(주성분) 빨강 선
+    sub: '#9aa0a6',                          // 종속·수식 검정(다크배경: 회색) 선
     S: '#4285f4', V: '#C0504D', O: '#34a853', IO: '#a142f4', OC: '#fa903e', C: '#4285f4',
     mod: '#c8ccd2', restored: '#8a8f98',    // 수식어 텍스트(다크 배경 대비)
 };
@@ -100,8 +101,9 @@ function _measure(text, font) {
 }
 
 function _sx(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-function _line(x1, y1, x2, y2, w) {
-    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${_RK.line}" stroke-width="${w || 2}" stroke-linecap="round"/>`;
+// color 인자 생략 시 주절 빨강(_RK.line). 수식어/받침대는 _RK.sub(검정계열) 전달.
+function _line(x1, y1, x2, y2, w, color) {
+    return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color || _RK.line}" stroke-width="${w || 2}" stroke-linecap="round"/>`;
 }
 function _txt(x, y, t, size, fill, italic) {
     return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" fill="${fill}"${italic ? ' font-style="italic"' : ''}>${_sx(t)}</text>`;
@@ -128,18 +130,19 @@ function _modItemW(m) {
 // 전치사구 받침대 SVG (left, top 기준) → {svg, height}
 function _ppStandSVG(pp, left, top) {
     const m = _ppMetrics(pp);
+    const K = _RK.sub;   // 전치사구 받침대는 검정계열(종속·수식)
     let svg = '';
     const prepBaseY = top + 15;
     const underY = prepBaseY + 5;
-    svg += _line(left, top, left, underY);                              // 세로 다리
-    svg += _txt(left + 8, prepBaseY, m.prep, 13, _RK.mod);             // 전치사
-    svg += _line(left, underY, left + Math.max(m.prepW + 14, 46), underY); // 명사 받침 가로선
+    svg += _line(left, top, left, underY, 2, K);                          // 세로 다리
+    svg += _txt(left + 8, prepBaseY, m.prep, 13, _RK.mod);               // 전치사
+    svg += _line(left, underY, left + Math.max(m.prepW + 14, 46), underY, 2, K); // 명사 받침 가로선
     const nounBaseY = underY + 20;
-    svg += _txt(left + 20, nounBaseY, m.np.head, 13, _RK.mod);         // 목적어 명사
+    svg += _txt(left + 20, nounBaseY, m.np.head, 13, _RK.mod);           // 목적어 명사
     let y = nounBaseY;
     (m.np.mods || []).forEach(mm => {
         y += 19;
-        svg += _line(left + 34, y - 11, left + 43, y - 2);             // \ 사선
+        svg += _line(left + 34, y - 11, left + 43, y - 2, 2, K);          // \ 사선
         svg += _txt(left + 47, y, mm, 12, _RK.restored);
     });
     return { svg, height: (y - top) + 10 };
@@ -157,7 +160,7 @@ function _modBlockSVG(mods, cx, startY) {
             svg += r.svg; y += r.height;
         } else {
             const restored = m.startsWith('(');
-            svg += _line(left, y + 4, left + 9, y + 14);              // \ 사선
+            svg += _line(left, y + 4, left + 9, y + 14, 2, _RK.sub);  // \ 사선(검정계열)
             svg += _txt(left + 14, y + 15, m, 13, restored ? _RK.restored : _RK.mod, restored);
             y += 22;
         }
@@ -219,7 +222,7 @@ function buildDiagramSVG(R) {
     let maxBottom = lineY;
     cells.forEach(c => {
         if (!c.mods || !c.mods.length) return;
-        parts.push(_line(c.cx, lineY, c.cx, lineY + STEM));   // stem
+        parts.push(_line(c.cx, lineY, c.cx, lineY + STEM, 2, _RK.sub));   // stem(수식어 연결=검정)
         const blk = _modBlockSVG(c.mods, c.cx, lineY + STEM);
         parts.push(blk.svg);
         const bottom = lineY + STEM + blk.height;
