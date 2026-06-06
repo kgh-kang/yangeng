@@ -174,3 +174,19 @@ HTML border 기반 다이어그램은 픽셀 정렬이 계속 어긋나(수직�
   카드 안에 검정 SVG 다이어그램 표시. `style.css`에 `.clause-diagram` 추가.
 - 검증("I saw the stars that were shining in the sky"): 종속절 패널 SVG 검정선 11·
   빨강선 0, 주절 메인 빨강선 2. 파서 21/21, CSS 172/172, 렌더 무예외.
+
+## 2026-05-31 — 수동태 처리 (세션 8, YouTube 13주차 반영)
+
+13주차 "능동태와 수동태" 영상 분석 → 강의 규칙 구현.
+- **강의 규칙**: 수동태(be + 과거분사)는 **무조건 2형식**. be=본동사, 과거분사=형용사(보어 수식),
+  생략보어 one/ones. 형식 강등: 3형식→2 / 4형식→2(IO·DO 각각 주어화한 두 패턴) / 5형식→2.
+- **착수 전 버그**: `was offered a prize`→4형식 오판, `was broken/advanced`(뒤 목적어 X)→1형식,
+  by/to 행위자구 미부착.
+- **구현(parser.js)**:
+  · `PP_IRREGULAR` 불규칙 과거분사 사전 + `isPastParticiple()`(불규칙 또는 ~ed).
+  · `parsePassive()`: parsePred에서 be+과거분사 감지 시 분기. 과거분사를 보어(comp)로,
+    뒤 전치사구(by/to/for 행위자)·잔여목적어를 보어 수식어로. 무조건 2형식(의존형).
+- **검증**: 수동태 9문장 전부 2형식 정상. 하니스 28/28(수동 7케이스 추가). be+형용사(She was happy),
+  ~ed 형용사보어(I am tired/interested), 진행형(were shining=1형식) 회귀 정상.
+- **미구현(영상 범위 밖)**: 원형부정사 5형식 수동 to복원(see him go→was seen to go),
+  진행/완료 수동(is being p.p., has been p.p.).

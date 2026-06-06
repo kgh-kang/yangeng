@@ -200,6 +200,19 @@ function isV(w){
 function tok(s){return s.replace(/[!?.]+$/,'').replace(/,/g,' ').trim().split(/\s+/).filter(w=>w);}
 
 // ================================================================
+// 수동태 (13주차 강의) — be + 과거분사 → 무조건 2형식(의존형)
+//   be=동사, 과거분사=형용사(보어 수식). 형식 강등: 3→2, 4→2, 5→2.
+// ================================================================
+const PP_IRREGULAR=new Set('born broken made given taken seen written done gone known shown thrown drawn grown blown chosen spoken stolen driven eaten fallen forgotten hidden ridden risen beaten bitten worn torn sworn frozen woven proven mistaken forgiven forbidden overcome built found told sold held sent kept left met paid said set put cut hit let brought bought taught caught fought thought sought lost meant felt dealt understood'.split(' '));
+function isPastParticiple(w){
+    const l=lo(w);
+    if(PP_IRREGULAR.has(l)) return true;
+    // be 뒤 문맥에서 ~ed로 끝나면 과거분사로 본다(advanced 등 DB에 없어도).
+    if(/ed$/i.test(l)) return true;
+    return false;
+}
+
+// ================================================================
 // 이퀄 관계 판별 (양박사님 핵심)
 // S = C 이면 2형식, S ≠ O 이면 3형식
 // "She made a good wife" → she = wife → 2형식
@@ -837,7 +850,48 @@ function parsePred(words,lw,vi,R){
         if(part){ R.verb+=' '+words[idx]; idx++; }
     }
 
+    // ── 수동태 감지 (be + 과거분사) → 2형식 전용 처리로 분기 ──
+    // 동사구가 be 계열을 포함하고 마지막 단어가 과거분사면 수동태.
+    {
+        const vparts=R.verb.split(' ');
+        const last=vparts[vparts.length-1];
+        const hasbe=vparts.some(p=>BE.has(lo(p.replace(/^not$/,''))));
+        if(hasbe && vparts.length>=2 && isPastParticiple(last) && !isAdj(last)){
+            parsePassive(words,lw,idx,R,last);
+            return;
+        }
+    }
+
     parseRem(words,lw,idx,R);
+}
+
+// 수동태 술어 분석 — 강의: 무조건 2형식. 과거분사를 보어로, 뒤 명사/전치사구는 수식어/보충.
+function parsePassive(words,lw,si,R,ppWord){
+    // 과거분사를 동사구에서 떼어 보어(형용사)로 본다 (강의: be=동사, p.p.=형용사보어).
+    const vparts=R.verb.split(' ');
+    R.verb=vparts.slice(0,-1).join(' ') || vparts[0]; // be(조동사 포함)만 동사로
+    R.comp={head:ppWord, mods:[]};
+    R.type='2형식'; R.typeKo='의존형'; R.verbStyle="'이(되)다'";
+
+    // 나머지 토큰: 전치사구(by행위자/to-IO 등)는 수식어, 그 외(4형식 잔여목적어 등)도 수식어로
+    let i=si;
+    while(i<words.length){
+        if(PREP.has(lw[i])){
+            let pp=[words[i]];i++;
+            while(i<words.length&&!PREP.has(lw[i])){pp.push(words[i]);i++;}
+            R.comp.mods.push(pp.join(' '));   // by/ to 행위자구 → 과거분사보어 수식
+            continue;
+        }
+        // 4형식 수동(He was offered a prize): 잔여 직접목적어 → 보어 수식어로
+        if(isAdv(words[i])){ R.modV.push(words[i]); i++; continue; }
+        // 명사구 묶기
+        let np=[words[i]];i++;
+        while(i<words.length&&!PREP.has(lw[i])&&(ART.has(lw[i])||isAdj(words[i])||isNoun(words[i]))){
+            if(ART.has(lw[i])&&np.length) break; // 새 명사구 시작이면 끊기
+            np.push(words[i]);i++;
+        }
+        R.comp.mods.push(np.join(' '));
+    }
 }
 
 function parseRem(words,lw,si,R){

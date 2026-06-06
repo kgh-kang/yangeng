@@ -46,9 +46,14 @@ const CASES = [
     ['They can pull out a single fact.', 3, '句동사 pull out'],
     ['Machines can break down.', 1, '句동사 break down(자동사)'],
     ['The devices pick up signals.', 3, '句동사 pick up'],
-    // 수동태
-    ['Engineering was advanced by the researcher.', 2, '수동→2형식'],
-    ['You will be made wise by the deep analysis.', 2, '수동(5→)'],
+    // 수동태 (13주차 강의: 무조건 2형식, 형식 강등)
+    ['Engineering was advanced by the researcher.', 2, '3형식 수동→2형식'],
+    ['You will be made wise by the deep analysis.', 2, '5형식 수동→2형식'],
+    ['He was offered a grand prize by the university.', 2, '4형식 수동(IO주어)→2형식'],
+    ['A grand prize was offered to him by the university.', 2, '4형식 수동(DO주어,to복원)→2형식'],
+    ['The window was broken by the boy.', 2, '3형식 수동(by)→2형식'],
+    ['The work was done.', 2, '수동(by생략)→2형식'],
+    ['He was called a genius by them.', 2, '5형식 수동(명사보어)→2형식'],
     // 복문(종속절) — 단문 기대 null, clauses 검사 별도
     ['I saw that the stars were shining in the sky.', null, '복문 명사절'],
     ['I saw the stars that were shining in the sky.', null, '복문 형용사절'],
