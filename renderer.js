@@ -267,6 +267,9 @@ function getTypeExplanation(R) {
             }
             return `동사 <strong>${vb}</strong> 뒤에 명사/형용사가 와서 주어와 <strong>이퀄(=) 관계</strong>이므로 <strong>2형식</strong>입니다.` + extra;
         case '3형식':
+            if (R.objIsInf) {
+                return `동사 <strong>${vb}</strong> 뒤의 <strong>${esc(R.obj.head)}</strong>은 to부정사의 <strong>명사적 용법(목적어)</strong>입니다. 목적어가 1개이므로 <strong>3형식</strong>입니다.`;
+            }
             return `동사 <strong>${vb}</strong> 뒤에 명사 1개가 와서 주어와 <strong>이퀄 관계가 아니므로</strong> (목적어) <strong>3형식</strong>입니다.`;
         case '4형식':
             return `동사 <strong>${vb}</strong> 뒤에 명사 2개가 와서 <strong>"~에게 ~을"</strong> 수여 의미이므로 <strong>4형식</strong>입니다.`;

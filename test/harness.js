@@ -62,6 +62,31 @@ const CASES = [
     ['The window is being broken by the boy.', 2, '진행 수동(is being p.p.)'],
     ['The work has been done.', 2, '완료 수동(has been p.p.)'],
     ['The bridge had been built.', 2, '과거완료 수동(had been p.p.)'],
+    // ── to부정사 (세션 10) ──
+    ['I want to go home.', 3, 'to부정사 목적어→3형식'],
+    ['She decided to leave.', 3, 'to부정사 목적어→3형식'],
+    ['He likes to read.', 3, 'to부정사 목적어→3형식'],
+    ['To learn is important.', 2, 'to부정사 주어→2형식'],
+    ['I want him to go.', 5, '5형식 O+to부정사(회귀)'],
+    ['I came to help you.', 1, 'to부정사 부사적용법(회귀)'],
+    // ── 자잘한 보정 (세션 10) ──
+    ['She reads books every day.', 3, '시간부사구 every day'],
+    ['She is as smart as him.', 2, '비교 as~as'],
+    ['He is taller than I.', 2, '비교급 than'],
+    ['He found her honest.', 5, 'her 목적격+형용사 OC'],
+    ['The flowers smell sweet.', 2, '감각 연결동사+형용사'],
+    ['The system processes large amounts of data efficiently.', 3, '공학동사+시간/부사'],
+    ['A computer stores files.', 3, '공학동사 store'],
+    // ── 관계대명사절(주어 수식) — 주절 형식 검사 (세션 10) ──
+    ['The man who runs is fast.', 2, '주격 관계절+주절2형식'],
+    ['People who work hard succeed.', 1, '관계절 선행사=첫단어'],
+    ['The student who studies hard passes the exam.', 3, '관계절+주절3형식'],
+    ['The book that I read was good.', 2, '목적격 관계절+주절2형식'],
+    ['The system that processes data is fast.', 2, '관계절(공학)+주절2형식'],
+    // ── 문두 부사절 — 주절 형식 검사 (세션 10) ──
+    ['When the system fails, we restart it.', 3, '문두 부사절 when'],
+    ['If you study hard, you will pass the exam.', 3, '문두 부사절 if'],
+    ['Although he tried, he failed.', 1, '문두 부사절 although'],
     // 복문(종속절) — 단문 기대 null, clauses 검사 별도
     ['I saw that the stars were shining in the sky.', null, '복문 명사절'],
     ['I saw the stars that were shining in the sky.', null, '복문 형용사절'],

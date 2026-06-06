@@ -209,3 +209,31 @@ HTML border 기반 다이어그램은 픽셀 정렬이 계속 어긋나(수직�
   진짜 수동태가 아닌 일반 2형식 형용사 보어로 처리 → "형식 강등" 해설 오부착 방지.
 - **검증**: 하니스 32/32(신규 6케이스: 지각/사역 수동 to복원 3, 진행/완료 수동 3).
   determinism 3회 반복 동일, stars 비결정성 없음. render_smoke 수동태 3문장 무예외.
+
+## 2026-06-06 — 시험 대비 재검증 & 대규모 보강 (세션 10)
+
+오픈북 시험에 사용할 예정 → 70여 문장 경험적 audit으로 구멍을 찾아 일괄 보강.
+착수 시 audit 오판 9건 → 완료 후 1건(진행형↔동명사보어 본질 모호성만 잔존).
+
+- **to부정사 (신규)**: `TO_INF_OBJ` 사전 + `takesToInfObj()`.
+  · 명사적 용법 목적어: "I want to go"=3형식(`parseRem`에 분기, `R.objIsInf`).
+  · to부정사 주어: "To learn is important"=2형식(`parseDecl` 문두 처리, `R.subIsInf`).
+  · 회귀 유지: "I want him to go"=5형식, "I came to help"=1형식(부사적), "I go to school"=1형식.
+- **관계대명사절 — 주어 수식 (신규)**: `splitComplex`에 선행 본동사가 없을 때만(주어 안)
+  who/whom/whose/which/that 관계절을 검출 → 주절+형용사절 분리. 선행사 복원.
+  "The man who runs is fast"→주절2형식+형용사절. 목적어수식 관계절(기존)·"I saw the stars that…" 회귀 정상.
+- **문두 부사절 (신규)**: "When/If/Because/Although …, 주절" 콤마 분리. 강한 종속접속사는 항상 절,
+  모호한 접속사(as/before/after…)는 절 내 동사 유무 확인("As a student," 전치사구 제외).
+- **자잘한 보정**:
+  · 시간 부사구(`TIME_DET`+`TIME_NOUN`, `TIME_ADV`): "every day/this morning/yesterday"를 목적어가 아닌 부사구로.
+  · 비교구문: be/연결동사 + "as ADJ as …", "ADJ-er than …", "more ADJ than …" → 형용사 보어(2형식).
+  · 감각 연결동사+형용사("smell sweet")·"found her honest"(목적격 her) → ADJ 사전 보강으로 해결.
+- **★ -ent/-ant 명사 버그 수정**: 형용사 접미사 규칙이 student/agent/document/government/equipment
+  등 -ent/-ant **명사**를 형용사로 오태깅(→isNoun=false) → 주어/관계절 분석 광범위 오류.
+  규칙에서 `ent|ant` 제거 + 흔한 -ent/-ant 형용사(different/important/efficient…)는 `ADJ_EXTRA`에 명시.
+- **동사 DB 보강**: 공학·일반 동사 대량 추가(process/store/generate/transmit/compute/collect/connect…,
+  succeed/fail/pass/win/lose… 등). regular verb를 isV가 못 잡아 S-V가 뒤바뀌던 문제 완화.
+- **검증**: 하니스 **53/53**(신규 21케이스: to부정사·관계절·부사절·보정), determinism 5회 동일,
+  render_smoke 7문장 무예외(관계절·부사절 패널 정상), audit 70문장 중 오판 1건(동명사보어).
+- **알려진 한계(시험 시 주의)**: ① "My hobby is reading"류 동명사 보어↔진행형 모호. ② DB에 없는
+  희귀 동사의 S-V 오인 가능. ③ 목적격 관계절의 절 내부 형식 라벨은 근사(분리 자체는 성공).

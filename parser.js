@@ -16,6 +16,17 @@ const OC_CONSIDER=new Set('call calls called name names named make makes made fi
 const CAUSATIVE=new Set('make makes made let lets have has had set sets'.split(' '));
 const PERCEPTION=new Set('see sees saw seen watch watches watched hear hears heard feel feels felt smell smells smelled smelt notice notices noticed observe observes observed'.split(' '));
 const INDUCTIVE=new Set('help helps helped get gets got gotten'.split(' '));
+// to부정사를 목적어(명사적 용법)로 취하는 동사 — "I want to go" = 3형식. 원형 기준(verbBases로 대조).
+const TO_INF_OBJ=new Set('want need like love hate prefer decide hope plan expect wish try begin start continue learn choose agree refuse promise offer manage fail intend attempt seek aim tend afford deserve pretend claim wait care hesitate desire mean propose threaten vow opt struggle prepare arrange long'.split(' '));
+function takesToInfObj(vb,vbBase){
+    if(TO_INF_OBJ.has(vb)||TO_INF_OBJ.has(vbBase)) return true;
+    for(const b of verbBases(vb)){ if(TO_INF_OBJ.has(b)) return true; }
+    return false;
+}
+// 시간 부사구 — 목적어가 아니라 부사구로 처리 ("every day", "this morning", "yesterday")
+const TIME_NOUN=new Set('day days week weeks month months year years morning mornings afternoon afternoons evening evenings night nights hour hours minute minutes moment moments weekend weekends decade decades century centuries semester semesters'.split(' '));
+const TIME_DET=new Set('every each this last next'.split(' '));
+const TIME_ADV=new Set('today yesterday tomorrow tonight nowadays daily weekly monthly yearly annually hourly'.split(' '));
 const OC_GENERAL=new Set('tell tells told ask asks asked want wants wanted expect expects expected advise advises advised allow allows allowed cause causes caused enable enables enabled encourage encourages encouraged force forces forced invite invites invited order orders ordered permit permits permitted persuade persuades persuaded remind reminds reminded require requires required urge urges urged warn warns warned forbid forbids forbade forbidden need needs needed'.split(' '));
 const AUX=new Set('do does did have has had will would shall should can could may might must need dare ought'.split(' '));
 const PREP=new Set('in on at to for with by from of about into through during before after above below between under over up down out off near around against along across behind beside beyond among upon within without toward towards until since except like unlike despite throughout'.split(' '));
@@ -29,13 +40,13 @@ const ADJ_SET=new Set('good bad great big small large little old new young long 
 const INTRANS_ONLY=new Set('rise rises rose risen arrive arrives arrived die dies died exist exists existed happen happens happened shine shines shone rain rains rained wander wanders wandered sleep sleeps slept laugh laughs laughed cry cries cried smile smiles smiled walk walks walked run runs ran sit sits sat stand stands stood swim swims swam lie lies lay lain live lives lived work works worked travel travels traveled wait waits waited fall falls fell fallen emerge emerges emerged disappear disappears disappeared occur occurs occurred proceed proceeds proceeded function functions functioned breathe breathes breathed sneeze sneezes sneezed cough coughs coughed yawn yawns yawned sigh sighs sighed tremble trembles trembled shiver shivers shivered jump jumps jumped kneel kneels knelt bark barks barked relax relaxes relaxed'.split(' '));
 
 // 자타 겸용 동사 (자동사/타동사 모두 가능) — TRANSITIVE에 추가
-const AMBI_VERBS=new Set('dance dances danced sing sings sang sung fly flies flew flown climb climbs climbed scream screams screamed shout shouts shouted whisper whispers whispered move moves moved change changes changed grow grows grew grown stop stops stopped continue continues continued shake shakes shook shaken ring rings rang rung swim swims swam swum hang hangs hung blow blows blew blown draw draws drew drawn'.split(' '));
+const AMBI_VERBS=new Set('dance dances danced sing sings sang sung fly flies flew flown climb climbs climbed scream screams screamed shout shouts shouted whisper whispers whispered move moves moved change changes changed grow grows grew grown stop stops stopped continue continues continued shake shakes shook shaken ring rings rang rung swim swims swam swum hang hangs hung blow blows blew blown draw draws drew drawn succeed succeeds succeeded fail fails failed pass passes passed matter matters mattered count counts counted differ differs differed react reacts reacted respond responds responded apply applies applied vary varies varied depend depends depended belong belongs belonged consist consists consisted remain remains remained increase increases increased decrease decreases decreased win wins won lose loses lost'.split(' '));
 
 // 일반 타동사 (3형식 전용) — 확장
 const TRANSITIVE=new Set('eat eats ate eaten drink drinks drank drunk play plays played read reads write writes wrote written study studies studied learn learns learned learnt use uses used open opens opened close closes closed start starts started stop stops stopped begin begins began begun finish finishes finished enjoy enjoys enjoyed love loves loved like likes liked hate hates hated need needs needed want wants wanted take takes took taken carry carries carried hold holds held catch catches caught hit hits break breaks broke broken build builds built cut cuts create creates created destroy destroys destroyed develop develops developed discuss discusses discussed explain explains explained improve improves improved include includes included involve involves involved meet meets met produce produces produced provide provides provided receive receives received remember remembers remembered serve serves served speak speaks spoke spoken spend spends spent support supports supported understand understands understood visit visits visited accept accepts accepted achieve achieves achieved choose chooses chose chosen describe describes described establish establishes established examine examines examined follow follows followed mention mentions mentioned obtain obtains obtained prepare prepares prepared raise raises raised suggest suggests suggested complete completes completed contain contains contained express expresses expressed manage manages managed represent represents represented solve solves solved review reviews reviewed analyze analyzes analyzed check checks checked test tests tested fix fixes fixed handle handles handled replace replaces replaced remove removes removed add adds added update updates updated submit submits submitted cancel cancels canceled confirm confirms confirmed share shares shared upload uploads uploaded download downloads downloaded install installs installed delete deletes deleted edit edits edited publish publishes published release releases released launch launches launched consider considers considered avoid avoids avoided attempt attempts attempted continue continues continued decide decides decided determine determines determined discover discovers discovered enjoy enjoys enjoyed expand expands expanded explore explores explored generate generates generated identify identifies identified indicate indicates indicated maintain maintains maintained observe observes observed perform performs performed prevent prevents prevented protect protects protected reduce reduces reduced report reports reported require requires required'.split(' '));
 
 // 보강 타동사 (DB 누락 흔한 타동사) — 句동사 어근 포함
-const EXTRA_TRANS=new Set('pull pulls pulled push pushes pushed pick picks picked turn turns turned'.split(' '));
+const EXTRA_TRANS=new Set('pull pulls pulled push pushes pushed pick picks picked turn turns turned process processes processed store stores stored generate generates generated transmit transmits transmitted compute computes computed retrieve retrieves retrieved display displays displayed execute executes executed implement implements implemented simulate simulates simulated calculate calculates calculated measure measures measured detect detects detected convert converts converted transfer transfers transferred transform transforms transformed operate operates operated control controls controlled design designs designed allow allows allowed reduce reduces reduced enable enables enabled record records recorded encode encodes encoded decode decodes decoded filter filters filtered render renders rendered collect collects collected connect connects connected link links linked affect affects affected influence influences influenced gather gathers gathered lead leads led reach reaches reached represent represents represented apply applies applied combine combines combined separate separates separated define defines defined assign assigns assigned access accesses accessed monitor monitors monitored adjust adjusts adjusted modify modifies modified extract extracts extracted insert inserts inserted'.split(' '));
 
 // ================================================================
 // 句동사(phrasal verb) — 동사+불변화사(particle)가 한 동사 (강의: take in, pull out 등)
@@ -109,11 +120,13 @@ function getNlpTags(w) {
     }
 }
 
+// 보어로 흔히 쓰이나 NLP가 명사로 오태깅하기 쉬운 형용사 보강
+const ADJ_EXTRA=new Set('sweet sour bitter salty fresh smart clear correct quick huge cheap expensive heavy dead blind deaf wild late wet dry sick ill well mad honest common usual unusual normal strange odd typical major minor basic natural physical mental equal exact final initial actual total cold warm flat loud calm tall round sharp smooth thin thick wide narrow deep different important excellent efficient sufficient consistent relevant significant constant instant elegant distant dependent independent apparent evident frequent silent urgent intelligent confident convenient permanent prominent fluent decent present absent reluctant abundant dominant ignorant resistant vacant vibrant obedient'.split(' '));
 function isAdj(w){
     const l=lo(w);
     if(ART.has(l)) return true; // 관사 = 형용사 (양박사님)
-    if(ADJ_SET.has(l)) return true;
-    if(/(?:ful|less|ous|ive|ible|able|ent|ant|ical|ish)$/i.test(w)) return true;
+    if(ADJ_SET.has(l)||ADJ_EXTRA.has(l)) return true;
+    if(/(?:ful|less|ous|ive|ible|able|ical|ish)$/i.test(w)) return true;
     // NLP 폴백
     const tags=getNlpTags(l);
     if(tags && tags.has('Adjective') && !tags.has('Verb')) return true;
@@ -488,6 +501,62 @@ function splitComplex(sentence){
     if(rawWords.length<4) return null;
     const lw=rawWords.map(w=>lo(w).replace(/[.,!?]/g,''));
 
+    // ── 문두 부사절: "When/If/Because/Although ... , 주절" (콤마 구분) ──
+    if(SUB_CONJ.has(lw[0])){
+        let commaIdx=-1;
+        for(let i=0;i<rawWords.length-1;i++){ if(rawWords[i].endsWith(',')){commaIdx=i;break;} }
+        if(commaIdx>0){
+            const subWords=rawWords.slice(0,commaIdx+1);
+            const mainWords=rawWords.slice(commaIdx+1);
+            // 강한 종속접속사(when/if/because/although...)+콤마면 거의 항상 절.
+            // 모호한 접속사(as/before/after/until/since)만 절 내 동사 유무를 확인("As a student," 전치사구 제외).
+            const STRONG_SUB=new Set('because although though if unless when while whereas whenever wherever once where'.split(' '));
+            const verbish=w=>{const c=lo(w).replace(/[.,!?]/g,'');return AUX.has(c)||BE.has(c)||isV(w.replace(/[.,!?]/g,''))||/(?:ed|ing)$/i.test(c);};
+            const subHasVerb=STRONG_SUB.has(lw[0])||subWords.slice(1).some(verbish);
+            if(subHasVerb && mainWords.length>=2){
+                const conn=lw[0];
+                const subText=subWords.slice(1).join(' ').replace(/,/g,' ').trim();
+                const mainText=mainWords.join(' ').trim();
+                return {mainText, subs:[{rel:'부사절', conn, antecedent:null, text:subText, fullText:subWords.join(' ').replace(/,\s*$/,'')}], nounObject:false};
+            }
+        }
+    }
+
+    // ── 주어를 수식하는 관계대명사절: "NP who/which/that ... + 본동사 ..." ──
+    // (선행 본동사가 없을 때 = 관계절이 주어 안에 있을 때만. 목적어 수식 관계절은 기존 로직.)
+    {
+        const REL_SUBJ=new Set('who whom whose which that'.split(' '));
+        const clean=w=>w.replace(/[.,!?]/g,'');
+        const isVerbAt=k=>{const c=lw[k];return AUX.has(c)||BE.has(c)||(isV(clean(rawWords[k]))&&!isAdj(clean(rawWords[k])));};
+        for(let r=1;r<rawWords.length-1;r++){
+            if(!REL_SUBJ.has(lw[r])) continue;
+            const ante=clean(rawWords[r-1]);
+            const al=lo(ante);
+            // 선행사 후보: 관사/전치사/접속사/조동사/be/부사가 아니면 명사로 본다(student 등 -ent 명사 포함)
+            if(ART.has(al)||PREP.has(al)||CONJ.has(al)||AUX.has(al)||BE.has(al)||isAdv(ante)) break;
+            // 관계사 앞에 본동사가 이미 있으면 주어 수식 관계절 아님(목적어 수식 → 아래 일반 로직)
+            let priorVerb=false;
+            for(let k=0;k<r-1;k++){ if(isVerbAt(k)){priorVerb=true;break;} }
+            if(priorVerb) break;
+            // 관계절 동사
+            let relVerb=-1;
+            for(let k=r+1;k<rawWords.length;k++){ if(isVerbAt(k)){relVerb=k;break;} }
+            if(relVerb<0) break;
+            // 주절 본동사: 관계절 동사 이후 다음 정동사
+            let mvi2=-1;
+            for(let k=relVerb+1;k<rawWords.length;k++){
+                if(lw[k]==='to') continue;
+                if(isVerbAt(k)&&!PREP.has(lw[k])){ mvi2=k; break; }
+            }
+            if(mvi2<0) break;
+            const antecedent=ante;
+            const mainText=(rawWords.slice(0,r).join(' ')+' '+rawWords.slice(mvi2).join(' ')).replace(/[.,!?]+/g,'').trim();
+            const relSubjPresent=!isVerbAt(r+1); // 관계사 바로 뒤가 동사가 아니면 목적격 관계절
+            const subText=(antecedent+' '+rawWords.slice(r+1,mvi2).join(' ')).replace(/[.,!?]+/g,'').trim();
+            return {mainText, subs:[{rel:'형용사절', conn:lw[r], antecedent, text:subText, fullText:rawWords.slice(r,mvi2).join(' ').replace(/[.,!?]+/g,'')}], nounObject:false};
+        }
+    }
+
     // 주절 동사 위치(첫 본동사) 찾기
     let mvi=-1;
     for(let i=0;i<rawWords.length;i++){
@@ -505,6 +574,11 @@ function splitComplex(sentence){
         // 형용사절(관계부사) when/where 가 선행명사 뒤(콤마 없음)
         if((w==='when'||w==='where') && prevIsNoun && !hasComma){
             return mk(rawWords,i,'형용사절',lw[i],prevRaw.replace(/,$/,''));
+        }
+        // 비교구문 "as ADJ as": 종속절이 아님(부사절 오인 방지)
+        if(w==='as'){
+            const nx=rawWords[i+1]?lo(rawWords[i+1]).replace(/[.,!?]/g,''):'';
+            if(nx&&(isAdj(nx)||isAdv(nx))) continue;
         }
         // 부사절: 종속접속사 (콤마 동반 또는 절 접속)
         if(SUB_CONJ.has(w)){
@@ -703,6 +777,21 @@ function parseQ(words,lw,R){
 
 function parseDecl(words,lw,R){
     let vi=-1;
+    // ── to부정사 주어 ("To learn is important") ──
+    // 문두 "to + 동사"는 주어가 되는 to부정사구. 본동사(BE/조동사/정동사)를 찾아 그 앞까지를 주어로.
+    if(lw[0]==='to'&&words.length>2&&isV(words[1])&&!isAdj(words[1])){
+        let mvj=-1;
+        for(let j=2;j<words.length;j++){
+            if(AUX.has(lw[j])||BE.has(lw[j])){mvj=j;break;}
+            if(isV(words[j])&&!isAdj(words[j])&&!PREP.has(lw[j])&&!ART.has(lw[j])){mvj=j;break;}
+        }
+        if(mvj>1){
+            R.sub={head:words.slice(0,mvj).join(' '), mods:[]};
+            R.subIsInf=true;
+            parsePred(words,lw,mvj,R);
+            return;
+        }
+    }
     // 전략: 확실한 동사(AUX, BE, 동사DB)를 먼저 찾되,
     //        전치사구 내부는 스킵한다.
     //        전치사구가 끝나면(명사 뒤) 다시 동사를 찾는다.
@@ -954,6 +1043,46 @@ function parseRem(words,lw,si,R){
         tokens.push(words[i]); i++;
     }
     let lt=tokens.map(lo);
+
+    // ── 시간 부사구 추출 ("every day"/"this morning"/"yesterday") → 목적어 아님, 부사구 ──
+    {
+        const keep=[], timeAdv=[];
+        for(let k=0;k<tokens.length;k++){
+            if(TIME_DET.has(lt[k])&&k+1<tokens.length&&TIME_NOUN.has(lt[k+1])){
+                timeAdv.push(tokens[k]+' '+tokens[k+1]); k++; continue;
+            }
+            if(TIME_ADV.has(lt[k])){ timeAdv.push(tokens[k]); continue; }
+            keep.push(tokens[k]);
+        }
+        if(timeAdv.length){ tokens=keep; lt=tokens.map(lo); R.modV.push(...timeAdv); }
+    }
+
+    // ── 비교구문: be/연결동사 + "as ADJ as ...", "ADJ-er than ...", "more ADJ than ..." → 형용사 보어(2형식) ──
+    if((isPure||isLnk)&&tokens.length>0){
+        const hasComp=lt.includes('as')||lt.includes('than')||lt.includes('more')||lt.includes('less')||tokens.some(t=>/er$/i.test(t));
+        if(hasComp){
+            const adjI=tokens.findIndex(t=>{
+                const ll=lo(t);
+                if(ART.has(ll)||PRO_O.has(ll)||PRO_S.has(ll)||['more','less','than','as','other','another'].includes(ll)) return false;
+                return isAdj(t)||/er$/i.test(t); // taller/bigger/faster 등 ~er 비교급 포함
+            });
+            if(adjI>=0){
+                R.comp={head:tokens[adjI], mods:tokens.filter((_,k)=>k!==adjI)};
+                R.modV.push(...prepPh);
+                return;
+            }
+        }
+    }
+
+    // ── to부정사 명사적 용법(목적어) → 3형식 ──
+    // "I want to go", "She decided to leave": 동사 뒤에 명사 목적어 없이 to부정사만 오고,
+    // 그 동사가 to부정사를 목적어로 취하면 to부정사구 전체를 목적어로 본다.
+    if(toInf&&tokens.length===0&&!R.obj.head&&!R.comp.head&&!R.oc.head&&!R.io.head&&takesToInfObj(vb,vbBase)){
+        R.obj={head:toInf.join(' '), mods:[]};
+        R.objIsInf=true; // 명사적 용법 표시(해설용)
+        R.modV.push(...prepPh);
+        return;
+    }
 
     // ================================================================
     // 형식 판별 (양박사님 방식)

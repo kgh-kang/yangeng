@@ -42,6 +42,10 @@ const sents = [
     'He was seen to go.',
     'The window is being broken by the boy.',
     'The work has been done.',
+    'I want to go home.',
+    'To learn is important.',
+    'The man who runs is fast.',
+    'When the system fails, we restart it.',
 ];
 const report = [];
 for (const s of sents) {
