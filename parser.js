@@ -203,7 +203,7 @@ function tok(s){return s.replace(/[!?.]+$/,'').replace(/,/g,' ').trim().split(/\
 // 수동태 (13주차 강의) — be + 과거분사 → 무조건 2형식(의존형)
 //   be=동사, 과거분사=형용사(보어 수식). 형식 강등: 3→2, 4→2, 5→2.
 // ================================================================
-const PP_IRREGULAR=new Set('born broken made given taken seen written done gone known shown thrown drawn grown blown chosen spoken stolen driven eaten fallen forgotten hidden ridden risen beaten bitten worn torn sworn frozen woven proven mistaken forgiven forbidden overcome built found told sold held sent kept left met paid said set put cut hit let brought bought taught caught fought thought sought lost meant felt dealt understood'.split(' '));
+const PP_IRREGULAR=new Set('born broken made given taken seen written done gone known shown thrown drawn grown blown chosen spoken stolen driven eaten fallen forgotten hidden ridden risen beaten bitten worn torn sworn frozen woven proven mistaken forgiven forbidden overcome built found told sold held sent kept left met paid said set put cut hit let brought bought taught caught fought thought sought lost meant felt dealt understood heard read led fed bred sped sat won spun stuck struck swung hung dug clung flung slung stung spread cast cost burst quit rid shed slit split wet bet shot lit wound bound ground run laid lain lent bent burnt learnt wept swept crept slept dwelt spelt spilt spoilt knelt leant dreamt sung sunk swum begun drunk rung'.split(' '));
 function isPastParticiple(w){
     const l=lo(w);
     if(PP_IRREGULAR.has(l)) return true;
@@ -211,6 +211,8 @@ function isPastParticiple(w){
     if(/ed$/i.test(l)) return true;
     return false;
 }
+// 감정·상태 분사형용사: by행위자 없이 쓰이면 수동태가 아니라 형용사 보어로 본다(I am tired / interested).
+const EMOTION_ADJ=new Set('tired interested excited bored pleased satisfied worried surprised amazed annoyed confused disappointed embarrassed exhausted frightened scared shocked stressed delighted thrilled depressed frustrated relaxed concerned ashamed devoted dedicated'.split(' '));
 
 // ================================================================
 // 이퀄 관계 판별 (양박사님 핵심)
@@ -582,7 +584,7 @@ function parse(sentence){
     let R={
         orig, sub:{head:'',mods:[]}, verb:'', comp:{head:'',mods:[]},
         obj:{head:'',mods:[]}, io:{head:'',mods:[]}, oc:{head:'',mods:[]},
-        modV:[], toInf:null,
+        modV:[], toInf:null, passive:false, restoredInf:null,
         type:'',typeKo:'',verbStyle:'',sentType:'평서문',verbSub:'',
         warnings:[]
     };
@@ -818,8 +820,8 @@ function parsePred(words,lw,vi,R){
             parts.push(words[idx]);idx++;
             R.verb=parts.join(' ');
         }
-        // be + ~ed/pp = 수동태
-        else if(hasBe&&parts.length>0&&words[idx].endsWith('ed')&&isV(words[idx])&&!isAdj(words[idx])){
+        // be + 과거분사 = 수동태 (불규칙 PP 포함, isV 캐시에 의존하지 않고 결정적으로 흡수)
+        else if(hasBe&&parts.length>0&&isPastParticiple(words[idx])&&!isAdj(words[idx])){
             parts.push(words[idx]);idx++;
             R.verb=parts.join(' ');
         }
@@ -872,10 +874,26 @@ function parsePassive(words,lw,si,R,ppWord){
     R.verb=vparts.slice(0,-1).join(' ') || vparts[0]; // be(조동사 포함)만 동사로
     R.comp={head:ppWord, mods:[]};
     R.type='2형식'; R.typeKo='의존형'; R.verbStyle="'이(되)다'";
+    const ppl=lo(ppWord);
+    // by행위자 유무로 진짜 수동태와 분사형용사(tired/interested)를 구분 — 형식은 둘 다 2형식.
+    const hasByAgent=words.slice(si).some((w,k)=>lw[si+k]==='by');
+    R.passive=!(EMOTION_ADJ.has(ppl)&&!hasByAgent);
+    if(!R.passive){ R.verbStyle="'이다/되다'"; }
+    // 지각·사역·유도동사 수동태: 능동의 원형부정사가 to부정사로 복원됨 (saw him go → was seen to go)
+    const isPercCau=PERCEPTION.has(ppl)||CAUSATIVE.has(ppl)||INDUCTIVE.has(ppl);
 
     // 나머지 토큰: 전치사구(by행위자/to-IO 등)는 수식어, 그 외(4형식 잔여목적어 등)도 수식어로
     let i=si;
     while(i<words.length){
+        // 지각·사역동사 수동태 뒤의 "to + 동사" = 복원된 원형부정사(to부정사). 보어를 보충.
+        if(isPercCau && lw[i]==='to' && i+1<words.length && isV(words[i+1])){
+            let inf=[words[i]];i++;
+            while(i<words.length&&!PREP.has(lw[i])){inf.push(words[i]);i++;}
+            const infStr=inf.join(' ');
+            R.comp.mods.push(infStr);
+            R.restoredInf=infStr; // 원형부정사→to부정사 복원 표시 (해설용)
+            continue;
+        }
         if(PREP.has(lw[i])){
             let pp=[words[i]];i++;
             while(i<words.length&&!PREP.has(lw[i])){pp.push(words[i]);i++;}

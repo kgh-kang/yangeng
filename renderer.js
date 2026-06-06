@@ -258,6 +258,13 @@ function getTypeExplanation(R) {
         case '1형식':
             return `동사 <strong>${vb}</strong> 뒤에 목적어/보어 없이 문장이 완성되므로 <strong>1형식</strong>입니다.`;
         case '2형식':
+            if (R.passive) {
+                let p = `수동태(be+과거분사)는 양박사 체계에서 항상 <strong>2형식</strong>입니다. <strong>be</strong>가 동사, <strong>${esc(R.comp.head)}</strong>(과거분사)가 형용사 보어입니다 (능동태의 형식이 강등됨).`;
+                if (R.restoredInf) {
+                    p += ` 지각·사역동사 수동태에서는 능동태의 <strong>원형부정사</strong>가 <strong>to부정사</strong>로 복원됩니다 — 능동태의 원형부정사가 이 문장에서 <strong>${esc(R.restoredInf)}</strong>로 바뀌었습니다 (예: They saw him go → He was seen <strong>to go</strong>).`;
+                }
+                return p + extra;
+            }
             return `동사 <strong>${vb}</strong> 뒤에 명사/형용사가 와서 주어와 <strong>이퀄(=) 관계</strong>이므로 <strong>2형식</strong>입니다.` + extra;
         case '3형식':
             return `동사 <strong>${vb}</strong> 뒤에 명사 1개가 와서 주어와 <strong>이퀄 관계가 아니므로</strong> (목적어) <strong>3형식</strong>입니다.`;

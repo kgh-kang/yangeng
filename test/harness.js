@@ -54,6 +54,14 @@ const CASES = [
     ['The window was broken by the boy.', 2, '3형식 수동(by)→2형식'],
     ['The work was done.', 2, '수동(by생략)→2형식'],
     ['He was called a genius by them.', 2, '5형식 수동(명사보어)→2형식'],
+    // 원형부정사 5형식 수동 → to 복원 (saw him go → was seen to go)
+    ['He was seen to go.', 2, '지각동사 수동 to복원'],
+    ['She was made to cry by the movie.', 2, '사역동사 수동 to복원'],
+    ['You were heard to sing.', 2, '지각동사(heard) 수동 to복원'],
+    // 진행/완료 수동
+    ['The window is being broken by the boy.', 2, '진행 수동(is being p.p.)'],
+    ['The work has been done.', 2, '완료 수동(has been p.p.)'],
+    ['The bridge had been built.', 2, '과거완료 수동(had been p.p.)'],
     // 복문(종속절) — 단문 기대 null, clauses 검사 별도
     ['I saw that the stars were shining in the sky.', null, '복문 명사절'],
     ['I saw the stars that were shining in the sky.', null, '복문 형용사절'],

@@ -39,6 +39,9 @@ const sents = [
     'I saw the stars, when they were shining in the sky.',
     'I know who gave her comic books.',
     'I saw the stars.',
+    'He was seen to go.',
+    'The window is being broken by the boy.',
+    'The work has been done.',
 ];
 const report = [];
 for (const s of sents) {

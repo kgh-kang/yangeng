@@ -190,3 +190,22 @@ HTML border 기반 다이어그램은 픽셀 정렬이 계속 어긋나(수직�
   ~ed 형용사보어(I am tired/interested), 진행형(were shining=1형식) 회귀 정상.
 - **미구현(영상 범위 밖)**: 원형부정사 5형식 수동 to복원(see him go→was seen to go),
   진행/완료 수동(is being p.p., has been p.p.).
+
+## 2026-06-06 — 원형부정사 to복원 + 진행/완료 수동 (세션 9)
+
+세션 8의 남은 미구현 2건 처리.
+- **(1) 원형부정사 5형식 수동의 to복원** (saw him go → was seen **to** go):
+  지각·사역동사(see/hear/make 등)의 능동태 5형식 원형부정사 목적격보어는 수동태로 가면
+  to부정사로 복원됨. `parsePassive()`에서 과거분사가 PERCEPTION/CAUSATIVE/INDUCTIVE면
+  뒤의 "to+동사"를 복원된 원형부정사로 인식 → `R.restoredInf`에 저장, 보어 수식어로 부착.
+  렌더러 해설(getTypeExplanation)에 to복원 설명 추가.
+- **(2) 진행/완료 수동** (is being p.p. / has been p.p. / had been p.p.):
+  분석 결과 조동사 체인 수집 로직이 이미 정상 처리(2형식) 확인. 추가로 결정성 강화:
+  과거분사 흡수를 `isV`(compromise 캐시 의존) → `isPastParticiple` 기준으로 변경해
+  `was done`류가 캐시 상태와 무관하게 항상 수동 2형식이 되도록 함.
+- **버그 수정**: `heard`(및 read/led/sat/won 등 다수 불규칙 과거분사)가 `PP_IRREGULAR`에
+  누락 → `You were heard to sing.`이 5형식 오판되던 것 수정. 사전 대폭 확장.
+- **분사형용사 구분**: by행위자 없는 감정 분사형용사(tired/interested 등 `EMOTION_ADJ`)는
+  진짜 수동태가 아닌 일반 2형식 형용사 보어로 처리 → "형식 강등" 해설 오부착 방지.
+- **검증**: 하니스 32/32(신규 6케이스: 지각/사역 수동 to복원 3, 진행/완료 수동 3).
+  determinism 3회 반복 동일, stars 비결정성 없음. render_smoke 수동태 3문장 무예외.
