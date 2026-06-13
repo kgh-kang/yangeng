@@ -132,14 +132,21 @@ body::after {
     letter-spacing: -0.8px;
     color: var(--text);
 }
-.logo-by {
-    font-size: 12px;
-    font-weight: 400;
-    font-style: italic;
-    color: var(--text-3);
-    margin-top: 2px;
-}
 .tagline { display: none; }
+
+/* 푸터 — 맨 아래 제작 정보 */
+.site-footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-light);
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-3);
+}
+.site-footer .foot-sep {
+    margin: 0 8px;
+    color: var(--border);
+}
 
 /* ===== Input — Gemini chat bar ===== */
 .input-area {
