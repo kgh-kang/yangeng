@@ -69,6 +69,11 @@ const CASES = [
     ['To learn is important.', 2, 'to부정사 주어→2형식'],
     ['I want him to go.', 5, '5형식 O+to부정사(회귀)'],
     ['I came to help you.', 1, 'to부정사 부사적용법(회귀)'],
+    // 조동사+본동사 흡수 (give/finish 등 NLP가 형용사로 오태깅하는 동사 포함)
+    ['He will give her a book.', 4, '조동사+수여 will give→4형식'],
+    ['This will give the engineers a clear understanding.', 4, '조동사+수여(긴 목적어)'],
+    ['We must finish the project.', 3, '조동사+finish→3형식'],
+    ['She can make him happy.', 5, '조동사+사역→5형식'],
     // ── 자잘한 보정 (세션 10) ──
     ['She reads books every day.', 3, '시간부사구 every day'],
     ['She is as smart as him.', 2, '비교 as~as'],

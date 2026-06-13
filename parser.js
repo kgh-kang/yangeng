@@ -953,13 +953,15 @@ function parsePred(words,lw,vi,R){
             R.verb=parts.join(' ');
         }
         // be + 과거분사 = 수동태 (불규칙 PP 포함, isV 캐시에 의존하지 않고 결정적으로 흡수)
-        else if(hasBe&&parts.length>0&&isPastParticiple(words[idx])&&!isAdj(words[idx])){
+        else if(hasBe&&parts.length>0&&isPastParticiple(words[idx])&&(PP_IRREGULAR.has(lo(words[idx]))||!isAdj(words[idx]))){
             parts.push(words[idx]);idx++;
             R.verb=parts.join(' ');
         }
         // 이미 AUX/BE가 있으면 다음 단어가 동사일 때만 추가
         else if(parts.length>0&&(hasBe||parts.some(p=>AUX.has(lo(p))))){
-            if(isV(words[idx])&&!isAdj(words[idx])&&!ART.has(lw[idx])&&!PREP.has(lw[idx])){
+            // 조동사 뒤 본동사 흡수. DB 확인 동사(give/finish 등 NLP가 형용사로 오태깅하는 것 포함)는
+            // isAdj 무시하고 흡수, 그 외에는 isV+!isAdj 안전 가드.
+            if(!ART.has(lw[idx])&&!PREP.has(lw[idx])&&(isVStrict(words[idx])||(isV(words[idx])&&!isAdj(words[idx])))){
                 parts.push(words[idx]);idx++;
             }
             R.verb=parts.join(' ');
@@ -990,7 +992,7 @@ function parsePred(words,lw,vi,R){
         const vparts=R.verb.split(' ');
         const last=vparts[vparts.length-1];
         const hasbe=vparts.some(p=>BE.has(lo(p.replace(/^not$/,''))));
-        if(hasbe && vparts.length>=2 && isPastParticiple(last) && !isAdj(last)){
+        if(hasbe && vparts.length>=2 && isPastParticiple(last) && (PP_IRREGULAR.has(lo(last))||!isAdj(last))){
             parsePassive(words,lw,idx,R,last);
             return;
         }
