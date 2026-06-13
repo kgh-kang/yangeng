@@ -260,3 +260,14 @@ HTML border 기반 다이어그램은 픽셀 정렬이 계속 어긋나(수직�
 - **검증**: 하니스 **76/76**(14주차 23케이스 추가), determinism 5회 동일, render 무예외.
   Reading 13문장 형식·콤마 관계절(which)·동명사 주어 5형식 모두 정상.
 - **추가 한계**: 문두 부사적 to부정사("To find …, soldiers relied …")는 미완(주어 오인 가능).
+
+## 2026-06-13 — 구조도 수식어 가로 배치 (세션 12)
+
+교재 예제(14주차 ① No well-prepared boy scout troop would wander…)와 앱 렌더 비교 →
+수식어가 세로로 쌓여 교재(가로 나열)와 달랐음. `renderer.js` 수식어 레이아웃을 가로로 전환.
+- `_modBlockSVG`: 단어 수식어(\사선+단어)·전치사구 받침대를 좌→우로 나란히 배치(+`width` 반환).
+  `_modRowW()` 신설(수식어 총 가로폭). 단일 stem 제거 → 각 수식어가 baseline에서 직접 매닲.
+- `buildDiagramSVG`: 셀 폭을 수식어 가로 합산(`_modRowW`)으로 계산해 셀 겹침 방지.
+- 결과(① 문장): 210px(세로) → 129px(높이↓)·548px(폭↑). "No·well-prepared·boy·scout"가
+  주어 아래 한 줄, "into…·without…"가 동사 아래 나란히 — 교재와 동일 구조.
+- 검증: render_smoke 무예외, 하니스 76/76 유지.

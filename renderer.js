@@ -148,24 +148,37 @@ function _ppStandSVG(pp, left, top) {
     return { svg, height: (y - top) + 10 };
 }
 
-// cell 아래 수식어 블록 (cx 중심) → {svg, height}
+// 수식어 블록 총 가로폭 (가로 배치)
+function _modRowW(mods) {
+    if (!mods || !mods.length) return 0;
+    const GAP = 10;
+    return mods.map(_modItemW).reduce((a, b) => a + b, 0) + GAP * (mods.length - 1);
+}
+
+// cell 아래 수식어 블록 (cx 중심) — 교재처럼 가로로 나란히 배치 → {svg, height, width}
+//   · 단어 수식어(관사/형용사)  : \사선 + 단어 를 좌→우로 나열
+//   · 전치사구 받침대          : 받침대(세로 다리+가로선+명사+\사선)를 좌→우로 나열
 function _modBlockSVG(mods, cx, startY) {
-    if (!mods || !mods.length) return { svg: '', height: 0 };
-    const blockW = Math.max.apply(null, mods.map(_modItemW));
-    const left = cx - blockW / 2;
-    let y = startY, svg = '';
-    mods.forEach(m => {
+    if (!mods || !mods.length) return { svg: '', height: 0, width: 0 };
+    const GAP = 10;
+    const widths = mods.map(_modItemW);
+    const totalW = _modRowW(mods);
+    let left = cx - totalW / 2;
+    let svg = '', maxH = 0;
+    mods.forEach((m, i) => {
         if (_isPrepPhrase(m)) {
-            const r = _ppStandSVG(m, left, y);
-            svg += r.svg; y += r.height;
+            const r = _ppStandSVG(m, left, startY);     // 받침대는 자체 세로 다리를 baseline에서 시작
+            svg += r.svg;
+            if (r.height > maxH) maxH = r.height;
         } else {
             const restored = m.startsWith('(');
-            svg += _line(left, y + 4, left + 9, y + 14, 2, _RK.sub);  // \ 사선(검정계열)
-            svg += _txt(left + 14, y + 15, m, 13, restored ? _RK.restored : _RK.mod, restored);
-            y += 22;
+            svg += _line(left, startY + 2, left + 9, startY + 12, 2, _RK.sub);  // \ 사선(검정계열)
+            svg += _txt(left + 13, startY + 13, m, 13, restored ? _RK.restored : _RK.mod, restored);
+            if (20 > maxH) maxH = 20;
         }
+        left += widths[i] + GAP;
     });
-    return { svg, height: y - startY };
+    return { svg, height: maxH, width: totalW };
 }
 
 // 메인 다이어그램 SVG 생성
@@ -193,7 +206,7 @@ function buildDiagramSVG(R, opts) {
     // 2) 셀 폭(헤드 vs 수식어 블록 중 큰 쪽) + x 좌표
     cells.forEach(c => {
         c.headW = _measure(c.text, _FONT_MAIN);
-        c.modW = (c.mods && c.mods.length) ? Math.max.apply(null, c.mods.map(_modItemW)) : 0;
+        c.modW = _modRowW(c.mods);   // 수식어 가로 배치 총폭
         c.cellW = Math.max(c.headW, c.modW) + PADX * 2;
     });
     let x = 0;
@@ -220,14 +233,13 @@ function buildDiagramSVG(R, opts) {
         else if (c.sepAfter === 'half') parts.push(_line(bx, textTop, bx, lineY, 2.5, MC));
         else if (c.sepAfter === 'slash') parts.push(_line(bx, lineY, bx + 22, textTop, 2.5, MC)); // 보어 / 사선
     });
-    // 수식어 블록
+    // 수식어 블록 (교재처럼 baseline 바로 아래 가로 배치 — 별도 stem 없이 각 수식어가 직접 매닲)
     let maxBottom = lineY;
     cells.forEach(c => {
         if (!c.mods || !c.mods.length) return;
-        parts.push(_line(c.cx, lineY, c.cx, lineY + STEM, 2, _RK.sub));   // stem(수식어 연결=검정)
-        const blk = _modBlockSVG(c.mods, c.cx, lineY + STEM);
+        const blk = _modBlockSVG(c.mods, c.cx, lineY + 2);
         parts.push(blk.svg);
-        const bottom = lineY + STEM + blk.height;
+        const bottom = lineY + 2 + blk.height;
         if (bottom > maxBottom) maxBottom = bottom;
     });
 
