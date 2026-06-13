@@ -37,7 +37,7 @@ const PRO_O=new Set('me you him her it us them whom myself yourself himself hers
 const DEMO=new Set(['this','that','these','those']);
 const ADV_SET=new Set('very so too really quite rather pretty extremely always never often sometimes usually already still just also even only here there now then today yesterday tomorrow soon early late fast high slowly quickly well badly hard easily carefully certainly probably perhaps maybe definitely surely clearly simply together alone again almost enough ever far however instead long much nearly not once away back how when where why up down out off continuously earnestly thoroughly simultaneously instantly constantly merely finally suddenly recently frequently immediately eventually apparently obviously necessarily gradually literally naturally certainly actually generally especially particularly recently basically essentially merely primarily specifically'.split(' '));
 const ADJ_SET=new Set('good bad great big small large little old new young long short high low hot cold warm cool fast slow happy sad angry beautiful ugly nice fine open closed rich poor strong weak hard soft easy difficult important simple complex full empty clean dirty dark light bright deep wide narrow thick thin flat round sharp smooth quiet loud safe dangerous free busy ready sorry sure true false real possible impossible necessary available famous popular serious terrible wonderful amazing excellent perfect brilliant fantastic gorgeous handsome lovely pretty ambitious afraid alive alone asleep awake aware glad proud brave calm clever cruel curious dear eager fair faithful familiar fierce fond foolish gentle grateful guilty humble innocent jealous keen kind lazy loyal modest nervous patient polite rare rude selfish shy silly sincere stupid suspicious tall tiny tough vast violent visible wise worthy diligent special precise accurate electronic sophisticated similar conventional whole entire complete mere main chief own right wrong next last certain such due own previous different various other another several many few much little enough own blue red green yellow black white golden entire proper whole responsible effective efficient pleasant creative productive comfortable foreign domestic urban rural medical legal financial technical digital modern ancient recent interesting exciting boring surprising amazing confusing disappointing encouraging exhausting fascinating frightening irritating overwhelming relaxing satisfying shocking stunning terrifying thrilling annoying charming concerning disturbing embarrassing entertaining existing inspiring missing outstanding promising remaining resulting'.split(' '));
-const INTRANS_ONLY=new Set('rise rises rose risen arrive arrives arrived die dies died exist exists existed happen happens happened shine shines shone rain rains rained wander wanders wandered sleep sleeps slept laugh laughs laughed cry cries cried smile smiles smiled walk walks walked run runs ran sit sits sat stand stands stood swim swims swam lie lies lay lain live lives lived work works worked travel travels traveled wait waits waited fall falls fell fallen emerge emerges emerged disappear disappears disappeared occur occurs occurred proceed proceeds proceeded function functions functioned breathe breathes breathed sneeze sneezes sneezed cough coughs coughed yawn yawns yawned sigh sighs sighed tremble trembles trembled shiver shivers shivered jump jumps jumped kneel kneels knelt bark barks barked relax relaxes relaxed'.split(' '));
+const INTRANS_ONLY=new Set('rise rises rose risen arrive arrives arrived die dies died exist exists existed happen happens happened shine shines shone rain rains rained wander wanders wandered sleep sleeps slept laugh laughs laughed cry cries cried smile smiles smiled walk walks walked run runs ran sit sits sat stand stands stood swim swims swam lie lies lay lain live lives lived work works worked travel travels traveled wait waits waited fall falls fell fallen emerge emerges emerged disappear disappears disappeared occur occurs occurred proceed proceeds proceeded function functions functioned breathe breathes breathed sneeze sneezes sneezed cough coughs coughed yawn yawns yawned sigh sighs sighed tremble trembles trembled shiver shivers shivered jump jumps jumped kneel kneels knelt bark barks barked relax relaxes relaxed rely relies relied'.split(' '));
 
 // 자타 겸용 동사 (자동사/타동사 모두 가능) — TRANSITIVE에 추가
 const AMBI_VERBS=new Set('dance dances danced sing sings sang sung fly flies flew flown climb climbs climbed scream screams screamed shout shouts shouted whisper whispers whispered move moves moved change changes changed grow grows grew grown stop stops stopped continue continues continued shake shakes shook shaken ring rings rang rung swim swims swam swum hang hangs hung blow blows blew blown draw draws drew drawn succeed succeeds succeeded fail fails failed pass passes passed matter matters mattered count counts counted differ differs differed react reacts reacted respond responds responded apply applies applied vary varies varied depend depends depended belong belongs belonged consist consists consisted remain remains remained increase increases increased decrease decreases decreased win wins won lose loses lost'.split(' '));
@@ -46,7 +46,7 @@ const AMBI_VERBS=new Set('dance dances danced sing sings sang sung fly flies fle
 const TRANSITIVE=new Set('eat eats ate eaten drink drinks drank drunk play plays played read reads write writes wrote written study studies studied learn learns learned learnt use uses used open opens opened close closes closed start starts started stop stops stopped begin begins began begun finish finishes finished enjoy enjoys enjoyed love loves loved like likes liked hate hates hated need needs needed want wants wanted take takes took taken carry carries carried hold holds held catch catches caught hit hits break breaks broke broken build builds built cut cuts create creates created destroy destroys destroyed develop develops developed discuss discusses discussed explain explains explained improve improves improved include includes included involve involves involved meet meets met produce produces produced provide provides provided receive receives received remember remembers remembered serve serves served speak speaks spoke spoken spend spends spent support supports supported understand understands understood visit visits visited accept accepts accepted achieve achieves achieved choose chooses chose chosen describe describes described establish establishes established examine examines examined follow follows followed mention mentions mentioned obtain obtains obtained prepare prepares prepared raise raises raised suggest suggests suggested complete completes completed contain contains contained express expresses expressed manage manages managed represent represents represented solve solves solved review reviews reviewed analyze analyzes analyzed check checks checked test tests tested fix fixes fixed handle handles handled replace replaces replaced remove removes removed add adds added update updates updated submit submits submitted cancel cancels canceled confirm confirms confirmed share shares shared upload uploads uploaded download downloads downloaded install installs installed delete deletes deleted edit edits edited publish publishes published release releases released launch launches launched consider considers considered avoid avoids avoided attempt attempts attempted continue continues continued decide decides decided determine determines determined discover discovers discovered enjoy enjoys enjoyed expand expands expanded explore explores explored generate generates generated identify identifies identified indicate indicates indicated maintain maintains maintained observe observes observed perform performs performed prevent prevents prevented protect protects protected reduce reduces reduced report reports reported require requires required'.split(' '));
 
 // 보강 타동사 (DB 누락 흔한 타동사) — 句동사 어근 포함
-const EXTRA_TRANS=new Set('pull pulls pulled push pushes pushed pick picks picked turn turns turned process processes processed store stores stored generate generates generated transmit transmits transmitted compute computes computed retrieve retrieves retrieved display displays displayed execute executes executed implement implements implemented simulate simulates simulated calculate calculates calculated measure measures measured detect detects detected convert converts converted transfer transfers transferred transform transforms transformed operate operates operated control controls controlled design designs designed allow allows allowed reduce reduces reduced enable enables enabled record records recorded encode encodes encoded decode decodes decoded filter filters filtered render renders rendered collect collects collected connect connects connected link links linked affect affects affected influence influences influenced gather gathers gathered lead leads led reach reaches reached represent represents represented apply applies applied combine combines combined separate separates separated define defines defined assign assigns assigned access accesses accessed monitor monitors monitored adjust adjusts adjusted modify modifies modified extract extracts extracted insert inserts inserted'.split(' '));
+const EXTRA_TRANS=new Set('pull pulls pulled push pushes pushed pick picks picked turn turns turned process processes processed store stores stored generate generates generated transmit transmits transmitted compute computes computed retrieve retrieves retrieved display displays displayed execute executes executed implement implements implemented simulate simulates simulated calculate calculates calculated measure measures measured detect detects detected convert converts converted transfer transfers transferred transform transforms transformed operate operates operated control controls controlled design designs designed allow allows allowed reduce reduces reduced enable enables enabled record records recorded encode encodes encoded decode decodes decoded filter filters filtered render renders rendered collect collects collected connect connects connected link links linked affect affects affected influence influences influenced gather gathers gathered lead leads led reach reaches reached represent represents represented apply applies applied combine combines combined separate separates separated define defines defined assign assigns assigned access accesses accessed monitor monitors monitored adjust adjusts adjusted modify modifies modified extract extracts extracted insert inserts inserted steer steers steered track tracks tracked pinpoint pinpoints pinpointed broadcast broadcasts negotiate negotiates negotiated dispatch dispatches dispatched earn earns earned receive receives received'.split(' '));
 
 // ================================================================
 // 句동사(phrasal verb) — 동사+불변화사(particle)가 한 동사 (강의: take in, pull out 등)
@@ -168,6 +168,16 @@ function isVInDB(l){
     return BE.has(l)||AUX.has(l)||LINKING.has(l)||DITRANSITIVE.has(l)||OC_CONSIDER.has(l)||CAUSATIVE.has(l)||PERCEPTION.has(l)||INDUCTIVE.has(l)||OC_GENERAL.has(l)||INTRANS_ONLY.has(l)||TRANSITIVE.has(l)||AMBI_VERBS.has(l)||EXTRA_TRANS.has(l);
 }
 
+// DB 확인 동사(원형/굴절)만 — NLP 추정 제외. 본동사 탐색에서 NLP 오태깅(ground/prize 등) 회피용.
+function isVStrict(w){
+    const l=lo(w);
+    if(isVInDB(l)) return true;
+    if(/ed$/i.test(l)){const b=l.slice(0,-2); if(isVInDB(b)||isVInDB(b+'e')||isVInDB(l.slice(0,-1)))return true; if(b.length>=2&&b[b.length-1]===b[b.length-2]&&isVInDB(b.slice(0,-1)))return true;}
+    if(/es$/i.test(l)){const b=l.slice(0,-2); if(isVInDB(b)||isVInDB(b+'e')||isVInDB(l.slice(0,-1)))return true;}
+    if(/[^s]s$/i.test(w)){if(isVInDB(l.slice(0,-1)))return true;}
+    if(/ing$/i.test(w)){let b=l.replace(/ing$/,''); if(isVInDB(b))return true; if(b.length>=3&&b[b.length-1]===b[b.length-2]&&isVInDB(b.slice(0,-1)))return true; if(isVInDB(b+'e'))return true;}
+    return false;
+}
 function isV(w){
     const l=lo(w);
     if(isVInDB(l)) return true;
@@ -677,6 +687,15 @@ function parse(sentence){
         R.sentType='명령문';
         R.sub={head:'(You)',mods:[]};
         let si=0; if(lw[0]==='please'){R.modV.push('please');si=1;}
+        // 호격(vocative) 건너뛰기: "Ladies and gentlemen, be ambitious!" → 콤마 뒤 명령부터
+        const cm=orig.indexOf(',');
+        if(cm>0){
+            const before=orig.slice(0,cm).trim().split(/\s+/).filter(w=>w);
+            const afterFirst=orig.slice(cm+1).trim().split(/\s+/)[0];
+            if(afterFirst&&(BE.has(lo(afterFirst))||isV(afterFirst))&&before.length<words.length){
+                si=before.length;
+            }
+        }
         // 주어 누락 의심: 조동사(have/has/had/do/does/did/will/would 등)로 시작하면 경고
         const f=lw[si];
         if(AUX.has(f)&&f!=='do'&&f!=="don't"&&f!=='let'){
@@ -777,17 +796,32 @@ function parseQ(words,lw,R){
 
 function parseDecl(words,lw,R){
     let vi=-1;
-    // ── to부정사 주어 ("To learn is important") ──
-    // 문두 "to + 동사"는 주어가 되는 to부정사구. 본동사(BE/조동사/정동사)를 찾아 그 앞까지를 주어로.
-    if(lw[0]==='to'&&words.length>2&&isV(words[1])&&!isAdj(words[1])){
+    // ── to부정사 주어 ("To learn is important") — 콤마 없을 때만(콤마 있으면 문두 부사적 용법) ──
+    if(lw[0]==='to'&&words.length>2&&isV(words[1])&&!isAdj(words[1])&&!/,/.test(R.orig||'')){
+        // 본동사: BE/AUX 또는 DB확인 동사 우선(NLP 오태깅 명사를 동사로 오인하지 않게)
         let mvj=-1;
         for(let j=2;j<words.length;j++){
             if(AUX.has(lw[j])||BE.has(lw[j])){mvj=j;break;}
-            if(isV(words[j])&&!isAdj(words[j])&&!PREP.has(lw[j])&&!ART.has(lw[j])){mvj=j;break;}
+            if(isVStrict(words[j])&&!isAdj(words[j])&&!PREP.has(lw[j])&&!ART.has(lw[j])){mvj=j;break;}
         }
         if(mvj>1){
             R.sub={head:words.slice(0,mvj).join(' '), mods:[]};
             R.subIsInf=true;
+            parsePred(words,lw,mvj,R);
+            return;
+        }
+    }
+    // ── 동명사 주어 ("Relying on satellites ... makes the system precise") ──
+    // 문두 ~ing(동사)로 시작하고, 뒤에 BE/AUX 또는 DB확인 본동사가 있으면 그 앞까지가 동명사 주어구.
+    if(words.length>2&&/ing$/i.test(words[0])&&isV(words[0])&&!isAdj(words[0])){
+        let mvj=-1;
+        for(let j=1;j<words.length;j++){
+            if(AUX.has(lw[j])||BE.has(lw[j])){mvj=j;break;}
+            if(isVStrict(words[j])&&!isAdj(words[j])&&!PREP.has(lw[j])&&!ART.has(lw[j])&&lw[j]!=='to'){mvj=j;break;}
+        }
+        if(mvj>1){
+            R.sub={head:words.slice(0,mvj).join(' '), mods:[]};
+            R.subIsInf=true; // 동명사 주어(명사적 용법)
             parsePred(words,lw,mvj,R);
             return;
         }
@@ -1143,7 +1177,8 @@ function parseRem(words,lw,si,R){
     // to부정사가 있으면 2형식 체크를 건너뜀
     if((isDi||isOcC||isLnk)&&tokens.length>0){
         // to부정사 OC가 있으면 → 이퀄 체크 건너뛰고 5형식으로
-        if(toInf&&(isOcG||isOcC||isCau||isPerc||isInd)){
+        // (사역 make/have/let·지각 see/hear는 능동에서 원형부정사만 OC로 취함 → to부정사면 제외)
+        if(toInf&&(isOcG||isOcC||isInd)){
             // 5형식 로직으로 넘김 (아래 블록에서 처리)
         } else if(isLnk||isOcC) {
         // LINKING 또는 OC_CONSIDER 동사일 때 이퀄 관계 2형식 체크
@@ -1176,8 +1211,10 @@ function parseRem(words,lw,si,R){
             isOcPattern=true;
         }
 
+        // "make a success/mess/use of ~" 관용구 → 목적어(3형식). of전치사구가 붙은 make류는 이퀄(2형식)로 보지 않음.
+        const makeOfIdiom=isOcC&&prepPh.some(pp=>lo(pp.split(/\s+/)[0])==='of');
         // 명사가 1그룹이고 OC 패턴이 아니고 주어와 이퀄이면 → 2형식
-        if(!isOcPattern&&nounP.length>0&&countNounGroups(nounP)<=1&&isEqualRelation(R.sub.head, nounP)){
+        if(!makeOfIdiom&&!isOcPattern&&nounP.length>0&&countNounGroups(nounP)<=1&&isEqualRelation(R.sub.head, nounP)){
             assignComp(nounP, R);
             R.modV.push(...advP,...prepPh);
             if(toInf) R.modV.push(toInf.join(' '));
@@ -1188,7 +1225,7 @@ function parseRem(words,lw,si,R){
     }
 
     // 5형식: to부정사 OC → (ones) + to부정사를 수식어로 (교수님 체계)
-    if(toInf&&(isOcG||isOcC||isCau||isPerc||isInd)&&tokens.length>0){
+    if(toInf&&(isOcG||isOcC||isInd)&&tokens.length>0){
         R.obj=splitNP(tokens);
         R.oc={head:'(ones)',mods:[toInf.join(' ')]};
         if(isCau)R.verbSub='사역동사';else if(isPerc)R.verbSub='지각동사';
@@ -1196,9 +1233,11 @@ function parseRem(words,lw,si,R){
         R.modV.push(...prepPh); return;
     }
 
-    // 5형식: 사역/지각/유도 + O + 원형부정사/~ing
+    // 5형식: 사역/지각/help + O + 원형부정사/~ing
     // "made him clean the room", "helped me carry the box", "heard someone knocking"
-    if((isCau||isPerc||isInd)&&tokens.length>=2){
+    // (get은 원형부정사를 취하지 않으므로 제외 — get은 to부정사/과거분사만: get him to go, get it done)
+    const isHelp=/^help/.test(vbBase)||/^help/.test(vb);
+    if((isCau||isPerc||isHelp)&&tokens.length>=2){
         let objEnd=-1;
         for(let j=0;j<tokens.length;j++){
             if(PRO_O.has(lt[j])||PRO_S.has(lt[j])){objEnd=j;break;}
@@ -1370,6 +1409,10 @@ function parseRem(words,lw,si,R){
 
 // 보어 할당 헬퍼
 function assignComp(tokens, R){
+    // 순수 부사(here/there/now 등)만 있으면 보어가 아니라 수식어 → 1형식 (go there / is here)
+    if(tokens.length>0 && tokens.every(t=>isAdv(t)&&!isAdj(t)&&!ART.has(lo(t)))){
+        R.modV.push(...tokens); return;
+    }
     if(isAdjComp(tokens)){
         let adjMods=[], advMods=[];
         for(const t of tokens){

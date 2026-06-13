@@ -237,3 +237,26 @@ HTML border 기반 다이어그램은 픽셀 정렬이 계속 어긋나(수직�
   render_smoke 7문장 무예외(관계절·부사절 패널 정상), audit 70문장 중 오판 1건(동명사보어).
 - **알려진 한계(시험 시 주의)**: ① "My hobby is reading"류 동명사 보어↔진행형 모호. ② DB에 없는
   희귀 동사의 S-V 오인 가능. ③ 목적격 관계절의 절 내부 형식 라벨은 근사(분리 자체는 성공).
+
+## 2026-06-13 — 14주차(종합복습+GPS Reading) 반영 (세션 11)
+
+`PDF/공학영어14.pdf` = Chapter 2 형식 종합복습 + 연습문제 25 + Chapter 6 Reading
+"Ask a Satellite for Directions"(13문장, 각 문장에 강의 공식 형식 라벨 = 사실상 정답지).
+전 문장을 공식 라벨과 대조 → 오판 5건 발견·수정. (오픈북 시험 대비 핵심 검증.)
+
+- **go there / is here = 1형식**: 순수 부사(here/there/now)만 오면 보어가 아니라 수식어로
+  처리(`assignComp` 가드). go가 LINKING이라 "go there"를 2형식으로 오판하던 것 수정.
+- **사역 make/have + to부정사 ≠ 5형식**: 사역(make/have/let)·지각(see/hear)은 능동에서
+  원형부정사만 OC로 취함. to부정사 OC 경로에서 isCau/isPerc 제거 → "have a way to keep"=3형식.
+- **get은 원형부정사 OC 안 취함**: 원형부정사 5형식 경로를 (isCau||isPerc||help)로 한정.
+  "get a prize"가 (prize의 NLP 동사 오태깅 시) 5형식으로 새던 비결정성 제거 → 항상 3형식.
+- **동명사 주어**: "Relying on satellites … makes the system precise"=5형식. parseDecl에
+  동명사 주어 처리 추가. **본동사 탐색에 `isVStrict`(DB확인 동사, NLP 제외) 도입** →
+  "ground/stations"를 본동사로 오인하던 비결정성 제거(to부정사 주어 탐색도 동일 적용).
+- **make a X of Y 관용구 → 3형식**: "make a success of this election" 등 of전치사구가 붙은
+  make류는 이퀄(2형식)로 보지 않음.
+- **호격(vocative)**: "Ladies and gentlemen, be ambitious!" → 콤마 앞 호격 건너뛰고 명령 파싱.
+- **누락 동사 보강**: steer/track/pinpoint/broadcast/negotiate/rely/earn/receive 등(지문 동사).
+- **검증**: 하니스 **76/76**(14주차 23케이스 추가), determinism 5회 동일, render 무예외.
+  Reading 13문장 형식·콤마 관계절(which)·동명사 주어 5형식 모두 정상.
+- **추가 한계**: 문두 부사적 to부정사("To find …, soldiers relied …")는 미완(주어 오인 가능).
