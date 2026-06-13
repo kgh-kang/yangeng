@@ -3,164 +3,120 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>로고 시안 데모 — 공학영어 문장 분석기</title>
+<title>로고 시안 — 8번 다듬기 (위 빨간선 작게 · 글자 크게)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --primary:#5645d4; --primary2:#7b3ff2; --red:#C0504D;
-    --ink:#1a1a1a; --slate:#5d5b54; --steel:#787671;
-    --bg:#f6f5f4; --card:#fff; --hair:#e5e3df;
-  }
+  :root{--red:#C0504D;--ink:#1a1a1a;--slate:#5d5b54;--steel:#787671;--blue:#1a56db;--bg:#f6f5f4;--card:#fff;--hair:#e5e3df;--primary:#5645d4}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Inter','Noto Sans KR',sans-serif;background:var(--bg);color:var(--ink);padding:48px 24px 96px;line-height:1.5}
   .wrap{max-width:1080px;margin:0 auto}
   h1.page{font-size:24px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
   p.sub{color:var(--steel);font-size:14px;margin-bottom:36px}
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
-  .card{background:var(--card);border:1px solid var(--hair);border-radius:16px;padding:36px 32px;
-        display:flex;flex-direction:column;gap:20px;min-height:170px;box-shadow:0 1px 2px rgba(15,15,15,.04)}
-  .card .lbl{font-size:12px;color:var(--steel);font-weight:500;letter-spacing:.3px}
-  .card .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;
+  .card{background:var(--card);border:1px solid var(--hair);border-radius:16px;padding:40px 32px;
+        display:flex;flex-direction:column;gap:22px;min-height:190px;box-shadow:0 1px 2px rgba(15,15,15,.04)}
+  .lbl{font-size:12px;color:var(--steel);font-weight:500}
+  .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;
         background:#f0eeec;color:var(--slate);font-size:12px;font-weight:700;margin-right:8px}
-  .stage{flex:1;display:flex;align-items:center;justify-content:center;gap:14px}
-  /* 공통 로고 텍스트 */
-  .grad{background:linear-gradient(135deg,var(--primary),var(--primary2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-
-  /* 1. baseline 워드마크 */
-  .l1{font-size:30px;font-weight:700;letter-spacing:-.5px;position:relative;padding-bottom:10px}
-  .l1::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--red);border-radius:2px}
-  .l1 .tick{position:absolute;left:50%;bottom:-3px;width:3px;height:14px;background:var(--red);transform:translateX(-50%)}
-
-  /* 2. 모노그램 아이콘 + 워드마크 */
-  .ic{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary2));
-      display:flex;align-items:center;justify-content:center;flex:none}
-  .l2txt{font-size:22px;font-weight:700;letter-spacing:-.4px;line-height:1.15}
-  .l2txt small{display:block;font-size:11px;font-weight:500;color:var(--steel);letter-spacing:.5px}
-
-  /* 3. 퍼플 그라데이션 볼드 */
-  .l3{font-size:32px;font-weight:800;letter-spacing:-1px}
-
-  /* 4. 5형식 pill */
-  .pill{display:inline-flex;align-items:center;gap:10px;font-size:24px;font-weight:700;letter-spacing:-.4px}
-  .pill .tag{background:var(--primary);color:#fff;font-size:13px;font-weight:700;padding:4px 12px;border-radius:100px;letter-spacing:0}
-
-  /* 5. 브래킷 다이어그램 마크 */
-  .br{font-size:26px;font-weight:700;letter-spacing:-.3px;display:flex;align-items:center;gap:10px}
-  .br .dg{font-family:'Inter';color:var(--primary);font-weight:600;font-size:22px;letter-spacing:2px}
-
-  /* 6. 한글 레터마크 구문 */
-  .l6{display:flex;align-items:baseline;gap:12px}
-  .l6 .big{font-size:40px;font-weight:800;letter-spacing:-2px}
-  .l6 .meta{font-size:13px;color:var(--slate);font-weight:500;line-height:1.3}
-
-  /* 7. 미니멀 ink + dot */
-  .l7{font-size:28px;font-weight:600;letter-spacing:-.5px}
-  .l7 .dot{color:var(--red)}
-
-  /* 8. 다이어그램 자체가 로고 */
-  .l8{display:flex;flex-direction:column;align-items:center;gap:6px}
-  .l8 .nm{font-size:20px;font-weight:700;letter-spacing:-.3px}
-
-  /* 9. 영문 마크 */
-  .l9{text-align:center}
-  .l9 .en{font-size:30px;font-weight:800;letter-spacing:-1px}
-  .l9 .ko{font-size:12px;color:var(--steel);font-weight:500;letter-spacing:1.5px;margin-top:2px}
-
-  /* 10. 아이콘 타일 + 2줄 락업 */
-  .tile{width:52px;height:52px;border-radius:14px;background:#fff;border:1.5px solid var(--primary);
-        display:flex;align-items:center;justify-content:center;flex:none}
-  .l10 .nm{font-size:21px;font-weight:700;letter-spacing:-.4px;line-height:1.15}
-  .l10 .nm small{display:block;font-size:11px;color:var(--steel);font-weight:500;letter-spacing:.4px}
+  .stage{flex:1;display:flex;align-items:center;justify-content:center}
+  .logo{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .nm{font-weight:800;letter-spacing:-1px;color:var(--ink)}
+  .seg{fill:var(--ink);font-family:'Noto Sans KR';font-weight:700}
+  .sv{font-family:'Inter';font-weight:700}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1 class="page">로고 시안 10종 — 공학영어 문장 분석기</h1>
-  <p class="sub">Reed-Kellogg 구조도 모티프(빨강 baseline · <b>│</b> S-V 구분선)와 Notion 퍼플을 살린 안들입니다. 마음에 드는 번호 알려주세요. (이름도 바꾸고 싶으면 함께)</p>
+  <h1 class="page">로고 8번 다듬기 — 위 빨간선 작게 · 글자 크게</h1>
+  <p class="sub">구조도(S│V)를 작게 위에 얹고, 제목 글자를 키운 변형들입니다. 번호 + 이름(문장 분석기 / 공학영어 문장 분석기) 골라주세요.</p>
   <div class="grid">
 
-    <!-- 1 -->
+    <!-- A: 작은 S│V 다이어그램 + 큰 "문장 분석기" -->
     <div class="card">
-      <div class="lbl"><span class="num">1</span>구조도 baseline 워드마크 — 빨강 밑줄 + S·V 틱</div>
-      <div class="stage"><div class="l1">문장 분석기<span class="tick"></span></div></div>
+      <div class="lbl"><span class="num">A</span>작은 S│V + 문장 분석기(40px)</div>
+      <div class="stage"><div class="logo">
+        <svg width="92" height="26" viewBox="0 0 92 26">
+          <line x1="6" y1="17" x2="86" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <line x1="46" y1="9" x2="46" y2="24" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <text x="26" y="14" text-anchor="middle" class="sv" font-size="12" fill="#1a56db">S</text>
+          <text x="66" y="14" text-anchor="middle" class="sv" font-size="12" fill="#C0504D">V</text>
+        </svg>
+        <div class="nm" style="font-size:40px">문장 분석기</div>
+      </div></div>
     </div>
 
-    <!-- 2 -->
+    <!-- B: 더 작은 십자(┼)만 + 큰 글자(44px) -->
     <div class="card">
-      <div class="lbl"><span class="num">2</span>모노그램 아이콘(구조도 글리프) + 워드마크</div>
-      <div class="stage">
-        <div class="ic">
-          <svg width="26" height="26" viewBox="0 0 26 26"><line x1="3" y1="14" x2="23" y2="14" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><line x1="13" y1="6" x2="13" y2="20" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><line x1="17" y1="14" x2="21" y2="9" stroke="#ffd2cf" stroke-width="2.2" stroke-linecap="round"/></svg>
-        </div>
-        <div class="l2txt">문장 분석기<small>공학영어 5형식</small></div>
-      </div>
+      <div class="lbl"><span class="num">B</span>아주 작은 십자 + 문장 분석기(44px)</div>
+      <div class="stage"><div class="logo">
+        <svg width="40" height="22" viewBox="0 0 40 22">
+          <line x1="6" y1="14" x2="34" y2="14" stroke="#C0504D" stroke-width="2.4" stroke-linecap="round"/>
+          <line x1="20" y1="6" x2="20" y2="20" stroke="#C0504D" stroke-width="2.4" stroke-linecap="round"/>
+        </svg>
+        <div class="nm" style="font-size:44px">문장 분석기</div>
+      </div></div>
     </div>
 
-    <!-- 3 -->
+    <!-- C: 작은 S│V + 풀네임(공학영어 문장 분석기 30px) -->
     <div class="card">
-      <div class="lbl"><span class="num">3</span>퍼플 그라데이션 볼드 워드마크</div>
-      <div class="stage"><div class="l3 grad">문장 분석기</div></div>
+      <div class="lbl"><span class="num">C</span>작은 S│V + 공학영어 문장 분석기(30px)</div>
+      <div class="stage"><div class="logo">
+        <svg width="92" height="26" viewBox="0 0 92 26">
+          <line x1="6" y1="17" x2="86" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <line x1="46" y1="9" x2="46" y2="24" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <text x="26" y="14" text-anchor="middle" class="sv" font-size="12" fill="#1a56db">S</text>
+          <text x="66" y="14" text-anchor="middle" class="sv" font-size="12" fill="#C0504D">V</text>
+        </svg>
+        <div class="nm" style="font-size:30px">공학영어 문장 분석기</div>
+      </div></div>
     </div>
 
-    <!-- 4 -->
+    <!-- D: 작은 S│V│O 3칸 + 큰 글자(38px) -->
     <div class="card">
-      <div class="lbl"><span class="num">4</span>5형식 배지 + 이름</div>
-      <div class="stage"><div class="pill"><span class="tag">5형식</span>문장 분석기</div></div>
+      <div class="lbl"><span class="num">D</span>작은 S│V│O 3칸 + 문장 분석기(38px)</div>
+      <div class="stage"><div class="logo">
+        <svg width="120" height="26" viewBox="0 0 120 26">
+          <line x1="6" y1="17" x2="114" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <line x1="42" y1="9" x2="42" y2="24" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <line x1="80" y1="9" x2="80" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <text x="24" y="14" text-anchor="middle" class="sv" font-size="11" fill="#1a56db">S</text>
+          <text x="61" y="14" text-anchor="middle" class="sv" font-size="11" fill="#C0504D">V</text>
+          <text x="97" y="14" text-anchor="middle" class="sv" font-size="11" fill="#1aae39">O</text>
+        </svg>
+        <div class="nm" style="font-size:38px">문장 분석기</div>
+      </div></div>
     </div>
 
-    <!-- 5 -->
+    <!-- E: 작은 S│V(글자 없이 선만, 더 작게) + 큰 글자(42px) -->
     <div class="card">
-      <div class="lbl"><span class="num">5</span>브래킷 다이어그램 마크 [S│V]</div>
-      <div class="stage"><div class="br"><span class="dg">[S│V]</span>문장 분석기</div></div>
+      <div class="lbl"><span class="num">E</span>선만(라벨 없는 미니 구조도) + 문장 분석기(42px)</div>
+      <div class="stage"><div class="logo">
+        <svg width="70" height="18" viewBox="0 0 70 18">
+          <line x1="4" y1="12" x2="66" y2="12" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <line x1="35" y1="5" x2="35" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <div class="nm" style="font-size:42px">문장 분석기</div>
+      </div></div>
     </div>
 
-    <!-- 6 -->
+    <!-- F: 작은 S│V + 큰 글자 + 강광현 제작 매닲 -->
     <div class="card">
-      <div class="lbl"><span class="num">6</span>한글 레터마크 "구문"</div>
-      <div class="stage"><div class="l6"><span class="big grad">구문</span><span class="meta">공학영어<br>문장 분석기</span></div></div>
-    </div>
-
-    <!-- 7 -->
-    <div class="card">
-      <div class="lbl"><span class="num">7</span>미니멀 ink + 빨강 점(동사 노드)</div>
-      <div class="stage"><div class="l7">문장 분석기<span class="dot">.</span></div></div>
-    </div>
-
-    <!-- 8 -->
-    <div class="card">
-      <div class="lbl"><span class="num">8</span>구조도 자체가 로고</div>
-      <div class="stage">
-        <div class="l8">
-          <svg width="150" height="40" viewBox="0 0 150 40">
-            <line x1="6" y1="26" x2="144" y2="26" stroke="#C0504D" stroke-width="2.6" stroke-linecap="round"/>
-            <line x1="75" y1="12" x2="75" y2="34" stroke="#C0504D" stroke-width="2.6" stroke-linecap="round"/>
-            <text x="40" y="21" text-anchor="middle" font-family="Inter" font-size="15" font-weight="700" fill="#1a56db">S</text>
-            <text x="110" y="21" text-anchor="middle" font-family="Inter" font-size="15" font-weight="700" fill="#C0504D">V</text>
-          </svg>
-          <div class="nm">문장 분석기</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 9 -->
-    <div class="card">
-      <div class="lbl"><span class="num">9</span>영문 마크 (ParseLab)</div>
-      <div class="stage"><div class="l9"><div class="en grad">ParseLab</div><div class="ko">공학영어 문장 분석기</div></div></div>
-    </div>
-
-    <!-- 10 -->
-    <div class="card">
-      <div class="lbl"><span class="num">10</span>아이콘 타일(외곽선) + 2줄 락업</div>
-      <div class="stage">
-        <div style="display:flex;align-items:center;gap:14px" class="l10">
-          <div class="tile">
-            <svg width="28" height="28" viewBox="0 0 28 28"><line x1="4" y1="15" x2="24" y2="15" stroke="#C0504D" stroke-width="2.4" stroke-linecap="round"/><line x1="14" y1="7" x2="14" y2="22" stroke="#C0504D" stroke-width="2.4" stroke-linecap="round"/><line x1="18" y1="15" x2="22" y2="10" stroke="#5645d4" stroke-width="2.2" stroke-linecap="round"/></svg>
-          </div>
-          <div class="nm">문장 분석기<small>공학영어 5형식 구문분석</small></div>
-        </div>
-      </div>
+      <div class="lbl"><span class="num">F</span>A + "강광현 제작" \수식어로 매닲</div>
+      <div class="stage"><div class="logo" style="gap:4px">
+        <svg width="92" height="26" viewBox="0 0 92 26">
+          <line x1="6" y1="17" x2="86" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <line x1="46" y1="9" x2="46" y2="24" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+          <text x="26" y="14" text-anchor="middle" class="sv" font-size="12" fill="#1a56db">S</text>
+          <text x="66" y="14" text-anchor="middle" class="sv" font-size="12" fill="#C0504D">V</text>
+        </svg>
+        <div class="nm" style="font-size:40px">문장 분석기</div>
+        <svg width="160" height="24" viewBox="0 0 160 24" style="margin-top:-2px">
+          <line x1="40" y1="4" x2="49" y2="14" stroke="#9a8f8a" stroke-width="1.8" stroke-linecap="round"/>
+          <text x="53" y="17" font-family="Noto Sans KR" font-size="12" font-style="italic" fill="#787671">강광현 제작</text>
+        </svg>
+      </div></div>
     </div>
 
   </div>
