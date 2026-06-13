@@ -1187,6 +1187,19 @@ function parseRem(words,lw,si,R){
     // LINKING 또는 OC_CONSIDER(make 등)에 있는 동사만 2형식 후보
     // to부정사가 있으면 2형식 체크를 건너뜀
     if((isDi||isOcC||isLnk)&&tokens.length>0){
+        // 선처리: OC_CONSIDER + "명사구 + 끝 형용사(확정사전)" → 5형식 (keep her room clean 등)
+        // NLP 비결정성에 흔들리는 이퀄 경로보다 먼저, 결정적으로 판정.
+        if(isOcC&&!toInf&&tokens.length>=2){
+            const lastT=lo(tokens[tokens.length-1]);
+            if((ADJ_SET.has(lastT)||ADJ_EXTRA.has(lastT))&&!ART.has(lastT)){
+                const objT=tokens.slice(0,-1);
+                if(objT.some(w=>isNoun(w)||PRO_O.has(lo(w))||PRO_S.has(lo(w))||ART.has(lo(w)))){
+                    R.obj=splitNP(objT);
+                    R.oc={head:tokens[tokens.length-1],mods:[]};
+                    R.verbSub='간주동사'; R.modV.push(...prepPh); return;
+                }
+            }
+        }
         // to부정사 OC가 있으면 → 이퀄 체크 건너뛰고 5형식으로
         // (사역 make/have/let·지각 see/hear는 능동에서 원형부정사만 OC로 취함 → to부정사면 제외)
         if(toInf&&(isOcG||isOcC||isInd)){
@@ -1217,6 +1230,13 @@ function parseRem(words,lw,si,R){
             }
         }
         if(countNounGroups(nounP)>=2) isOcPattern=true;
+        // 명사구 + 끝 형용사(확정 사전) → 5형식 OC (keeps her room clean / paints the wall red)
+        if(!isOcPattern&&isOcC&&nounP.length>=2){
+            const last=lo(nounP[nounP.length-1]);
+            if((ADJ_SET.has(last)||ADJ_EXTRA.has(last))&&nounP.slice(0,-1).some(w=>isNoun(w)||PRO_O.has(lo(w))||PRO_S.has(lo(w)))){
+                isOcPattern=true;
+            }
+        }
         // tokens 전체에 동사(원형/~ing)가 포함되면 OC 패턴 (felt the house shake)
         if(!isOcPattern&&(isPerc||isCau||isInd)&&tokens.some(t=>isV(t)&&!isAdj(t)||t.endsWith('ing'))){
             isOcPattern=true;
@@ -1293,6 +1313,18 @@ function parseRem(words,lw,si,R){
     // "He made her happy" → her+happy (OC=형용사, 5형식)
     // "She made a good meal" → 1그룹만 → 3형식으로 빠져야 함
     if(isOcC&&tokens.length>=2){
+        // 패턴0: 명사구 + 끝 형용사(확정) → O(앞 전체) + OC(형용사) — keeps her room clean, paints the wall red
+        {
+            const lastT=lo(tokens[tokens.length-1]);
+            if((ADJ_SET.has(lastT)||ADJ_EXTRA.has(lastT))&&!ART.has(lastT)){
+                const objT=tokens.slice(0,-1);
+                if(objT.length>0&&objT.some(w=>isNoun(w)||PRO_O.has(lo(w))||PRO_S.has(lo(w))||ART.has(lo(w)))){
+                    R.obj=splitNP(objT);
+                    R.oc={head:tokens[tokens.length-1],mods:[]};
+                    R.verbSub='간주동사'; R.modV.push(...prepPh); return;
+                }
+            }
+        }
         // 패턴1: 대명사 + 형용사 → O + OC(형용사)
         if(PRO_O.has(lt[0])){
             let rest=tokens.slice(1);
