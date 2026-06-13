@@ -11,59 +11,57 @@
 </head>
 <body>
     <div class="app">
-        <!-- 헤더 -->
-        <header class="header">
-            <h1 class="logo" aria-label="공학영어 문장 분석기 — 강광현 제작">
-                <!-- 위: 작은 S│V│O 미니 구조도 -->
-                <svg class="logo-svo" viewBox="0 0 120 26" role="img" xmlns="http://www.w3.org/2000/svg">
-                    <line x1="6" y1="17" x2="114" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="42" y1="9" x2="42" y2="24" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
-                    <line x1="80" y1="9" x2="80" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
-                    <text x="24" y="14" text-anchor="middle" class="svo-lab" fill="#1a56db">S</text>
-                    <text x="61" y="14" text-anchor="middle" class="svo-lab" fill="#C0504D">V</text>
-                    <text x="97" y="14" text-anchor="middle" class="svo-lab" fill="#1aae39">O</text>
-                </svg>
-                <!-- 아래: 제목 -->
-                <span class="logo-title">공학영어 문장 분석기</span>
-            </h1>
-        </header>
+        <!-- 상단바: 로고 + 검색창 + 최근분석 (홈=세로 중앙 / 검색후=상단 스티키 헤더) -->
+        <div class="topbar">
+            <div class="topbar-main">
+                <h1 class="logo" role="button" tabindex="0" onclick="goHome()" onkeydown="if(event.key==='Enter')goHome()" aria-label="공학영어 문장 분석기 — 홈으로">
+                    <!-- 위: 작은 S│V│O 미니 구조도 -->
+                    <svg class="logo-svo" viewBox="0 0 120 26" role="img" xmlns="http://www.w3.org/2000/svg">
+                        <line x1="6" y1="17" x2="114" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="42" y1="9" x2="42" y2="24" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="80" y1="9" x2="80" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+                        <text x="24" y="14" text-anchor="middle" class="svo-lab" fill="#1a56db">S</text>
+                        <text x="61" y="14" text-anchor="middle" class="svo-lab" fill="#C0504D">V</text>
+                        <text x="97" y="14" text-anchor="middle" class="svo-lab" fill="#1aae39">O</text>
+                    </svg>
+                    <!-- 아래: 제목 -->
+                    <span class="logo-title">공학영어 문장 분석기</span>
+                </h1>
 
-        <!-- 입력 -->
-        <div class="input-area">
-            <div class="input-wrap">
-                <input
-                    id="inp"
-                    type="text"
-                    placeholder="영어 문장을 입력하세요"
-                    autocomplete="off"
-                    spellcheck="false"
-                    onkeydown="if(event.key==='Enter')go()"
-                >
-                <button class="btn-analyze" onclick="go()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                    <span>분석</span>
-                </button>
+                <!-- 입력 -->
+                <div class="input-area">
+                    <div class="input-wrap">
+                        <input
+                            id="inp"
+                            type="text"
+                            placeholder="영어 문장을 입력하세요"
+                            autocomplete="off"
+                            spellcheck="false"
+                            lang="en"
+                            inputmode="latin"
+                            oninput="this.value=this.value.replace(/[^\x20-\x7E]/g,'')"
+                            onkeydown="if(event.key==='Enter')go()"
+                        >
+                        <button class="btn-analyze" onclick="go()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            <span>분석</span>
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- 최근 분석 (검색창 바로 아래) -->
-        <div id="history-area"></div>
+            <!-- 최근 분석 (헤더 공간 안: 홈=검색창 아래 / 검색후=헤더 한 줄) -->
+            <div id="history-area"></div>
+        </div>
 
         <!-- 맞춤법/문법 체크 (결과 위) -->
         <div id="spell-area"></div>
 
         <!-- 결과 -->
-        <div id="result" class="result-area">
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d0d0d0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
-                </div>
-                <p>문장을 입력하면 구조도가 여기에 표시됩니다</p>
-            </div>
-        </div>
+        <div id="result" class="result-area"></div>
 
         <!-- 푸터 -->
-        <footer class="site-footer">공학영어 문장 분석기 <span class="foot-sep">|</span> kgh.kang@gmail.com</footer>
+        <footer class="site-footer">kgh.kang@gmail.com</footer>
 
     </div>
 

@@ -93,10 +93,61 @@ body::after {
 .app {
     max-width: 1120px;
     margin: 0 auto;
-    padding: 48px 40px 96px;
+    padding: 32px 40px 40px;
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
+
+/* ===== 상단바 공통: 세로(메인 + 최근분석) ===== */
+.topbar { display: flex; flex-direction: column; gap: 16px; }
+.topbar-main { display: flex; }
+
+/* ===== 상태: 홈(처음) — 로고+검색+최근검색을 화면 세로 중앙 ===== */
+body:not(.searched) .topbar { margin: auto 0; align-items: center; gap: 26px; }
+body:not(.searched) .topbar-main { flex-direction: column; align-items: center; gap: 30px; width: 100%; }
+body:not(.searched) #history-area { width: 100%; }
+body:not(.searched) .history-list { justify-content: center; }
+body:not(.searched) #result,
+body:not(.searched) #spell-area { display: none; }
+
+/* ===== 상태: 검색 후 — 헤더 스티키(로고+검색 한 줄 + 최근분석 한 줄) ===== */
+body.searched .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    gap: 10px;
+    background: rgba(246,245,244,0.92);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    padding: 12px 40px;
+    margin: -32px -40px 24px;
+    border-bottom: 1px solid var(--border);
+}
+/* 제목=좌측 고정(absolute) / 검색창=화면 중앙 */
+body.searched .topbar-main {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+body.searched .logo {
+    position: absolute;
+    left: 0; top: 50%;
+    transform: translateY(-50%);
+    flex-direction: row; align-items: center; gap: 9px;
+}
+body.searched .logo-svo { display: none; }   /* 헤더에선 로고 이미지 숨김(제목만) */
+body.searched .logo-title { font-size: 18px; letter-spacing: -0.4px; white-space: nowrap; }
+body.searched .input-area { width: 100%; max-width: 540px; margin: 0; min-width: 0; }
+body.searched .input-wrap { max-width: none; margin: 0; box-shadow: var(--shadow-sm); padding: 4px 4px 4px 0; }
+body.searched .input-wrap #inp { padding: 11px 20px; font-size: 15px; }
+body.searched .btn-analyze { padding: 10px 22px; }
+/* 헤더 안 최근분석: 라벨/삭제 줄 숨기고 칩 한 줄만 */
+body.searched .history-section { max-width: none; margin: 0; }
+body.searched .history-header { display: none; }
 
 /* ===== Header ===== */
 .header {
@@ -148,10 +199,12 @@ body::after {
     color: var(--border);
 }
 
-/* ===== Input — Gemini chat bar ===== */
+/* ===== Input — chat bar ===== */
 .input-area {
-    margin-bottom: 40px;
+    margin-bottom: 0;
+    width: 100%;
 }
+.logo { cursor: pointer; }
 
 .input-wrap {
     display: flex;
@@ -768,8 +821,10 @@ body::after {
 /* ===== History ===== */
 .history-section {
     max-width: 720px;
-    margin: -24px auto 36px;
+    margin: 0 auto;
+    width: 100%;
 }
+body.searched .history-section { max-width: 1120px; margin: 0 auto 20px; }
 
 .history-header {
     display: flex;
@@ -814,9 +869,9 @@ body::after {
     padding: 6px 16px;
     font-size: 13px;
     font-family: inherit;
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     border-radius: 100px;
-    background: var(--bg-surface);
+    background: #efece8;
     cursor: pointer;
     max-width: 260px;
     overflow: hidden;
@@ -827,8 +882,8 @@ body::after {
 }
 
 .history-item:hover {
-    background: rgba(86,69,212,0.06);
-    border-color: rgba(86,69,212,0.3);
+    background: rgba(86,69,212,0.10);
+    border-color: transparent;
     color: var(--primary);
 }
 
