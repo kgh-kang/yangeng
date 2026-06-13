@@ -78,10 +78,10 @@ const _FONT_STACK = '"Google Sans", -apple-system, BlinkMacSystemFont, "Segoe UI
 const _FONT_MAIN = '500 22px ' + _FONT_STACK;
 const _FONT_MOD = '400 13px ' + _FONT_STACK;
 const _RK = {
-    line: '#C0504D',                        // 주절(주성분) 빨강 선
-    sub: '#9aa0a6',                          // 종속·수식 검정(다크배경: 회색) 선
-    S: '#4285f4', V: '#C0504D', O: '#34a853', IO: '#a142f4', OC: '#fa903e', C: '#4285f4',
-    mod: '#c8ccd2', restored: '#8a8f98',    // 수식어 텍스트(다크 배경 대비)
+    line: '#C0504D',                        // 주절(주성분) 빨강 선 — 교재 동일
+    sub: '#37352f',                          // 종속·수식 검정 선 (밝은 배경=교재처럼 검정)
+    S: '#1a56db', V: '#C0504D', O: '#1aae39', IO: '#5645d4', OC: '#dd5b00', C: '#1a56db',
+    mod: '#37352f', restored: '#a4a097',    // 수식어 텍스트=검정 / 생략복원=연회색
 };
 
 let _mCanvas = null;

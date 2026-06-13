@@ -1,55 +1,49 @@
-/* ===== 양 번역기 — style.css (Gemini-inspired Design) ===== */
+/* ===== 양 번역기 — style.css (Notion-inspired Light Design) =====
+   디자인 토큰: VoltAgent/awesome-design-md → Notion DESIGN.md 기반.
+   밝은 교재풍: 흰 캔버스 + 퍼플 CTA + 헤어라인. 구조도는 교재처럼 빨강 주선/검정 수식. */
 
 :root {
-    --red: #C0504D;
-    --red-light: #e8d4d3;
-    --red-bg: rgba(192,80,77,0.08);
-    --blue: #4285f4;
-    --blue-light: #d2e3fc;
-    --green: #34a853;
-    --purple: #a142f4;
-    --orange: #fa903e;
-    --text: #1f1f1f;
-    --text-2: #5f6368;
-    --text-3: #9aa0a6;
-    --bg: #131314;
-    --bg-surface: #1e1f20;
-    --card: rgba(255,255,255,0.05);
-    --card-border: rgba(255,255,255,0.08);
-    --border: rgba(255,255,255,0.1);
-    --border-light: rgba(255,255,255,0.06);
-    --radius: 20px;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
-    --shadow-md: 0 4px 20px rgba(0,0,0,0.25);
+    /* Reed-Kellogg 구조도 역할색 (흰 배경 위 — 교재 동일) */
+    --red: #C0504D;              /* 주절·본동사 baseline */
+    --red-light: #efdedd;
+    --red-bg: rgba(192,80,77,0.07);
+    --blue: #1a56db;             /* S */
+    --blue-light: #dcecfa;
+    --green: #1aae39;            /* O */
+    --purple: #5645d4;           /* primary / IO */
+    --orange: #dd5b00;           /* OC */
 
-    /* Gemini gradient accent */
-    --gem-blue: #4285f4;
-    --gem-purple: #a142f4;
-    --gem-pink: #f439a0;
-    --gem-gradient: linear-gradient(135deg, #4285f4, #a142f4, #f439a0);
+    /* Notion 라이트 테마 */
+    --bg: #f6f5f4;               /* 페이지 surface */
+    --bg-surface: #ffffff;       /* 카드/입력 */
+    --card: #ffffff;
+    --card-border: #e5e3df;      /* hairline */
+    --border: #e5e3df;
+    --border-light: #ede9e4;
+    --hairline-strong: #c8c4be;
+    --text: #1a1a1a;             /* ink */
+    --text-2: #5d5b54;           /* slate */
+    --text-3: #787671;           /* steel */
 
-    /* Badge colors */
-    --badge-1: #4285f4;
-    --badge-2: #a142f4;
-    --badge-3: #34a853;
-    --badge-4: #fa903e;
-    --badge-5: #ea4335;
-}
+    --primary: #5645d4;          /* Notion 시그니처 퍼플 */
+    --primary-pressed: #4534b3;
 
-/* Always dark — no light override */
+    --radius: 16px;
+    --shadow-sm: 0 1px 2px rgba(15,15,15,0.04);
+    --shadow-md: 0 4px 16px rgba(15,15,15,0.08);
 
-/* Dark mode — Gemini dark */
-:root {
-    --bg: #131314;
-    --bg-surface: #1e1f20;
-    --card: rgba(255,255,255,0.05);
-    --card-border: rgba(255,255,255,0.08);
-    --border: rgba(255,255,255,0.1);
-    --border-light: rgba(255,255,255,0.06);
-    --text: #e3e3e3;
-    --text-2: #9aa0a6;
-    --text-3: #6e6e73;
-    --shadow-md: 0 2px 16px rgba(0,0,0,0.4);
+    /* 퍼플 CTA (Notion은 솔리드 퍼플 — 약한 그라데이션으로 마감) */
+    --gem-blue: #5645d4;
+    --gem-purple: #7b3ff2;
+    --gem-pink: #7b3ff2;
+    --gem-gradient: linear-gradient(135deg, #5645d4, #7b3ff2);
+
+    /* 형식 배지색 (Notion 톤) */
+    --badge-1: #1a56db;
+    --badge-2: #5645d4;
+    --badge-3: #1aae39;
+    --badge-4: #dd5b00;
+    --badge-5: #e03131;
 }
 
 *,
@@ -61,7 +55,7 @@
 }
 
 body {
-    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -70,7 +64,7 @@ body {
     position: relative;
 }
 
-/* Gemini gradient background blobs */
+/* 은은한 퍼플 배경 글로우 (Notion 톤) */
 body::before {
     content: '';
     position: fixed;
@@ -78,7 +72,7 @@ body::before {
     right: -10%;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(66,133,244,0.08) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(86,69,212,0.05) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
 }
@@ -90,7 +84,7 @@ body::after {
     left: -10%;
     width: 500px;
     height: 500px;
-    background: radial-gradient(circle, rgba(161,66,244,0.08) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(123,63,242,0.04) 0%, transparent 70%);
     pointer-events: none;
     z-index: 0;
 }
@@ -152,12 +146,12 @@ body::after {
 }
 
 .input-wrap:hover {
-    border-color: rgba(66,133,244,0.2);
+    border-color: var(--hairline-strong, #c8c4be);
 }
 
 .input-wrap:focus-within {
-    border-color: var(--gem-blue);
-    box-shadow: 0 2px 20px rgba(66,133,244,0.12);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(86,69,212,0.12);
 }
 
 #inp {
@@ -200,8 +194,9 @@ body::after {
 .btn-analyze::after { display: none; }
 
 .btn-analyze:hover {
-    opacity: 0.9;
-    box-shadow: 0 2px 12px rgba(66,133,244,0.3);
+    opacity: 1;
+    background: var(--primary-pressed);
+    box-shadow: 0 2px 12px rgba(86,69,212,0.3);
     transform: none;
 }
 
@@ -370,10 +365,10 @@ body::after {
     color: var(--text-3);
     font-style: italic;
     font-weight: 400;
-    border: 1px dashed rgba(255,255,255,0.15);
+    border: 1px dashed rgba(0,0,0,0.18);
     border-radius: 8px;
     padding: 2px 8px;
-    background: rgba(255,255,255,0.03);
+    background: rgba(0,0,0,0.025);
 }
 
 /* Separators
@@ -452,10 +447,10 @@ body::after {
 .mod-text.restored {
     color: var(--text-3);
     font-style: italic;
-    border: 1px dashed rgba(255,255,255,0.1);
+    border: 1px dashed rgba(0,0,0,0.14);
     border-radius: 4px;
     padding: 0 4px;
-    background: rgba(255,255,255,0.03);
+    background: rgba(0,0,0,0.025);
 }
 
 /* 단어 수식어의 \ 사선 마커 (강의 표기: \ No, \ the 등) */
@@ -524,7 +519,7 @@ body::after {
 .r-detail {
     padding: 24px 32px;
     border-top: 1px solid var(--border-light);
-    background: rgba(255,255,255,0.02);
+    background: rgba(0,0,0,0.02);
     font-size: 13px;
     line-height: 2.2;
     color: var(--text-2);
@@ -556,7 +551,7 @@ body::after {
 .tO { background: rgba(52,168,83,0.1); color: #1e8e3e; }
 .tIO { background: rgba(161,66,244,0.1); color: #9334e6; }
 .tOC { background: rgba(250,144,62,0.1); color: #e37400; }
-.tM { background: rgba(255,255,255,0.06); color: var(--text-2); }
+.tM { background: rgba(0,0,0,0.045); color: var(--text-2); }
 
 .det-hr {
     border: none;
@@ -596,7 +591,7 @@ body::after {
 }
 
 .btn-copy:hover {
-    background: rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.045);
     color: var(--text);
 }
 
@@ -678,7 +673,7 @@ body::after {
     align-items: center;
     gap: 10px;
     padding: 8px 14px;
-    background: rgba(255,255,255,0.04);
+    background: rgba(0,0,0,0.03);
     border-radius: 10px;
     font-size: 13px;
     color: var(--text-2);
@@ -903,7 +898,7 @@ body::after {
 .multi-detail {
     padding: 20px 32px;
     border-top: 1px solid var(--border-light);
-    background: rgba(255,255,255,0.02);
+    background: rgba(0,0,0,0.02);
     border-radius: 0 0 var(--radius) var(--radius);
 }
 

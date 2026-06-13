@@ -271,3 +271,18 @@ HTML border 기반 다이어그램은 픽셀 정렬이 계속 어긋나(수직�
 - 결과(① 문장): 210px(세로) → 129px(높이↓)·548px(폭↑). "No·well-prepared·boy·scout"가
   주어 아래 한 줄, "into…·without…"가 동사 아래 나란히 — 교재와 동일 구조.
 - 검증: render_smoke 무예외, 하니스 76/76 유지.
+
+## 2026-06-13 — Notion 라이트 테마 디자인 개선 (세션 13)
+
+[VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md)의 **Notion** DESIGN.md
+기반으로 다크 → 밝은 교재풍 라이트 테마 전환(구조도가 교재처럼 흰 배경+빨강/검정 선으로 보이게).
+- `style.css :root` 토큰 전면 교체: 흰 캔버스(#f6f5f4/#fff), ink/slate/steel 텍스트,
+  헤어라인(#e5e3df), 시그니처 퍼플 CTA(#5645d4), Notion 라운드/그림자 스케일.
+- 다크 전제 흰색 오버레이(rgba(255,255,255,.0x)) → 어두운 오버레이로 일괄 변환.
+- 파란 액센트(입력 포커스·버튼 hover) → 퍼플 통일, 배경 글로우 퍼플로 순화.
+- 폰트: Inter(라틴) + Noto Sans KR(한글).
+- `renderer.js _RK`: 흰 배경용으로 수식어/종속선 검정(#37352f), 역할색 심화
+  (S #1a56db, O #1aae39, IO #5645d4, OC #dd5b00). 주선은 교재 빨강 유지.
+- 문서: `docs/DESIGN.md`(프로젝트 디자인 스펙) + `docs/notion-design-reference.md`(원본).
+- 검증: 헤드리스 스크린샷으로 빈 화면·구조도(①1형식/②4형식) 확인 — 교재와 동일 레이아웃·색.
+  render_smoke 무예외, 하니스 76/76 유지.
