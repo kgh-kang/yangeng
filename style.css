@@ -108,29 +108,36 @@ body::after {
     display: none;
 }
 
-/* 로고 — 제목 자체가 미니 Reed-Kellogg 구조도 (제목 분절 + 강광현 제작이 \수식어로 매달림) */
+/* 로고 — 위에 작은 S│V│O 미니 구조도, 아래 제목 (시안 D) */
 .logo {
-    display: inline-block;
-    line-height: 0;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.1;
 }
-.logo-svg {
-    width: 384px;
-    max-width: 100%;
+.logo-svo {
+    width: 124px;
     height: auto;
 }
-.logo-seg {
-    font-family: 'Noto Sans KR', 'Inter', sans-serif;
-    font-size: 27px;
+.svo-lab {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: -0.5px;
-    fill: var(--text);
+}
+.logo-title {
+    font-family: 'Noto Sans KR', 'Inter', sans-serif;
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.8px;
+    color: var(--text);
 }
 .logo-by {
-    font-family: 'Noto Sans KR', 'Inter', sans-serif;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 400;
     font-style: italic;
-    fill: var(--text-3);
+    color: var(--text-3);
+    margin-top: 2px;
 }
 .tagline { display: none; }
 
