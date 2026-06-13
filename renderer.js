@@ -500,6 +500,14 @@ function go() {
         return;
     }
     const { results, conjunctions } = parseMulti(v);
+    if (results.length === 0) {   // 분석 불가(너무 짧거나 문장이 아님)
+        document.body.classList.add('searched');
+        document.getElementById('result').innerHTML =
+            `<div class="result-notice">분석할 수 없는 입력이에요. <strong>주어와 동사를 갖춘 영어 문장</strong>을 입력해 보세요. (예: She gave him a book.)</div>`;
+        const sp = document.getElementById('spell-area'); if (sp) sp.innerHTML = '';
+        saveToHistory(v); renderHistory();
+        return;
+    }
     if (results.length === 1) {
         render(results[0]);
     } else if (results.length > 1) {

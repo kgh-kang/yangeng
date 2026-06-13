@@ -714,7 +714,16 @@ function parse(sentence){
 
     // 평서문
     parseDecl(words,lw,R);
-    detType(R); return R;
+    detType(R);
+    // 비문 감지: 동사구에 실제 동사(또는 be/조동사)가 하나도 없으면 안내 경고
+    {
+        const vws=String(R.verb||'').split(' ').filter(Boolean);
+        const hasRealVerb=vws.some(w=>{const l=lo(w);return BE.has(l)||AUX.has(l)||isV(w);});
+        if(!hasRealVerb && R.sentType==='평서문'){
+            R.warnings.push('동사를 찾지 못했습니다. 주어와 동사를 갖춘 완전한 영어 문장인지 확인해 보세요.');
+        }
+    }
+    return R;
 }
 
 function isImp(w,lw,orig){

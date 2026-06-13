@@ -305,6 +305,17 @@ body.searched .history-header { display: none; }
     font-weight: 400;
 }
 
+.result-notice {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1.7;
+    box-shadow: var(--shadow-sm);
+}
+
 .empty-icon {
     opacity: 0.3;
 }
