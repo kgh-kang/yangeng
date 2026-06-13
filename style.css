@@ -71,9 +71,9 @@ body::before {
     position: fixed;
     top: -20%;
     right: -10%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(86,69,212,0.05) 0%, transparent 70%);
+    width: 820px;
+    height: 820px;
+    background: radial-gradient(circle, rgba(86,69,212,0.04) 0%, transparent 60%);
     pointer-events: none;
     z-index: 0;
 }
@@ -83,9 +83,9 @@ body::after {
     position: fixed;
     bottom: -15%;
     left: -10%;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(123,63,242,0.04) 0%, transparent 70%);
+    width: 720px;
+    height: 720px;
+    background: radial-gradient(circle, rgba(123,63,242,0.03) 0%, transparent 60%);
     pointer-events: none;
     z-index: 0;
 }
@@ -150,16 +150,6 @@ body.searched .btn-analyze { padding: 10px 22px; }
 body.searched .history-section { max-width: none; margin: 0; }
 body.searched .history-header { display: none; }
 
-/* ===== Header ===== */
-.header {
-    text-align: center;
-    margin-bottom: 48px;
-}
-
-.header-left, .header-text, .header-help, .logo-icon {
-    display: none;
-}
-
 /* 로고 — h1(제목 의미) > button(홈 이동). 위 S│V│O 미니 구조도 + 아래 제목 (시안 D) */
 .logo { display: inline-block; line-height: 0; }
 .logo-btn {
@@ -192,7 +182,6 @@ body.searched .history-header { display: none; }
     letter-spacing: -0.8px;
     color: var(--text);
 }
-.tagline { display: none; }
 
 /* 푸터 — 맨 아래 제작 정보 */
 .site-footer {
@@ -202,10 +191,6 @@ body.searched .history-header { display: none; }
     text-align: center;
     font-size: 13px;
     color: var(--text-3);
-}
-.site-footer .foot-sep {
-    margin: 0 8px;
-    color: var(--border);
 }
 
 /* ===== Input — chat bar ===== */
@@ -276,11 +261,11 @@ body.searched .history-header { display: none; }
     font-weight: 500;
     font-family: inherit;
     color: #fff;
-    background: var(--gem-gradient);
+    background: var(--primary);
     border: none;
     border-radius: 24px;
     cursor: pointer;
-    transition: opacity 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
     white-space: nowrap;
 }
 
@@ -345,17 +330,6 @@ body.searched .home-extra { display: none; }
     min-height: 120px;
 }
 
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    padding: 64px 0;
-    color: var(--text-3);
-    font-size: 14px;
-    font-weight: 400;
-}
-
 .result-notice {
     background: var(--card);
     border: 1px solid var(--card-border);
@@ -367,11 +341,7 @@ body.searched .home-extra { display: none; }
     box-shadow: var(--shadow-sm);
 }
 
-.empty-icon {
-    opacity: 0.3;
-}
-
-/* ===== Result Card — Gemini glass card ===== */
+/* ===== Result Card ===== */
 .result-card {
     background: var(--bg-surface);
     border: 1px solid var(--card-border);
@@ -875,14 +845,6 @@ body.searched .home-extra { display: none; }
     flex-shrink: 0;
 }
 
-/* ===== Footer ===== */
-.footer {
-    margin-top: 48px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--text-3);
-}
-
 /* ===== History ===== */
 .history-section {
     max-width: 720px;
@@ -936,7 +898,7 @@ body.searched .history-section { max-width: 1120px; margin: 0 auto 20px; }
     font-family: inherit;
     border: 1px solid transparent;
     border-radius: 100px;
-    background: #efece8;
+    background: #ececeb;
     cursor: pointer;
     max-width: 260px;
     overflow: hidden;

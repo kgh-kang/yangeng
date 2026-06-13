@@ -487,7 +487,7 @@ function render(R) {
             ${renderClauses(R)}
             <div class="r-detail">${det.join('<br>')}</div>
             <div class="r-actions">
-                <button id="copy-btn" class="btn-copy" data-copy-text="${esc(copyText).replace(/"/g, '&quot;')}" onclick="copyResult()">결과 복사</button>
+                <button id="copy-btn" class="btn-copy" data-copy-text="${esc(copyText).replace(/"/g, '&quot;')}">결과 복사</button>
             </div>
         </div>
     `;
@@ -767,5 +767,9 @@ document.addEventListener('click', function(e) {
     const summary = e.target.closest('.spell-summary');
     if (summary && summary.parentElement) {
         summary.parentElement.classList.toggle('spell-open');
+        return;
+    }
+    if (e.target.closest('.btn-copy')) {
+        copyResult();
     }
 });
