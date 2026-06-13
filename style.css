@@ -9,9 +9,9 @@
     --red-bg: rgba(192,80,77,0.07);
     --blue: #1a56db;             /* S */
     --blue-light: #dcecfa;
-    --green: #1aae39;            /* O */
+    --green: #157f2c;            /* O (대비 4.5:1+ 위해 진하게) */
     --purple: #5645d4;           /* primary / IO */
-    --orange: #dd5b00;           /* OC */
+    --orange: #c24e00;           /* OC (대비 위해 진하게) */
 
     /* Notion 라이트 테마 */
     --bg: #f6f5f4;               /* 페이지 surface */
@@ -23,7 +23,7 @@
     --hairline-strong: #c8c4be;
     --text: #1a1a1a;             /* ink */
     --text-2: #5d5b54;           /* slate */
-    --text-3: #787671;           /* steel */
+    --text-3: #6b6962;           /* steel (대비 4.5:1+ 위해 진하게) */
 
     --primary: #5645d4;          /* Notion 시그니처 퍼플 */
     --primary-pressed: #4534b3;
@@ -41,8 +41,8 @@
     /* 형식 배지색 (Notion 톤) */
     --badge-1: #1a56db;
     --badge-2: #5645d4;
-    --badge-3: #1aae39;
-    --badge-4: #dd5b00;
+    --badge-3: #157f2c;
+    --badge-4: #c24e00;
     --badge-5: #e03131;
 }
 
@@ -138,8 +138,8 @@ body.searched .logo {
     position: absolute;
     left: 0; top: 50%;
     transform: translateY(-50%);
-    flex-direction: row; align-items: center; gap: 9px;
 }
+body.searched .logo-btn { flex-direction: row; align-items: center; gap: 9px; }
 body.searched .logo-svo { display: none; }   /* 헤더에선 로고 이미지 숨김(제목만) */
 body.searched .logo-title { font-size: 18px; letter-spacing: -0.4px; white-space: nowrap; }
 body.searched .input-area { width: 100%; max-width: 540px; margin: 0; min-width: 0; }
@@ -160,13 +160,21 @@ body.searched .history-header { display: none; }
     display: none;
 }
 
-/* 로고 — 위에 작은 S│V│O 미니 구조도, 아래 제목 (시안 D) */
-.logo {
+/* 로고 — h1(제목 의미) > button(홈 이동). 위 S│V│O 미니 구조도 + 아래 제목 (시안 D) */
+.logo { display: inline-block; line-height: 0; }
+.logo-btn {
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
     line-height: 1.1;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
 }
 .logo-svo {
     width: 124px;
@@ -205,7 +213,15 @@ body.searched .history-header { display: none; }
     margin-bottom: 0;
     width: 100%;
 }
-.logo { cursor: pointer; }
+/* 포커스 표시(키보드 접근성) */
+.logo-btn:focus-visible,
+.btn-analyze:focus-visible,
+.history-item:focus-visible,
+.btn-copy:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
 
 .input-wrap {
     display: flex;
@@ -283,11 +299,46 @@ body.searched .history-header { display: none; }
     box-shadow: none;
 }
 
-/* ===== Example Chips — hidden ===== */
-.example-area { display: none; }
-.example-chip, .chip-label { display: none; }
-.chip-f1 .chip-label, .chip-f2 .chip-label, .chip-f3 .chip-label,
-.chip-f4 .chip-label, .chip-f5 .chip-label { display: none; }
+/* ===== 홈 안내 + 예시 칩 (검색 후 숨김) ===== */
+.home-extra { margin-top: 18px; text-align: center; }
+body.searched .home-extra { display: none; }
+.home-hint { font-size: 13px; color: var(--text-3); margin-bottom: 12px; }
+.example-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.ex-chip {
+    padding: 7px 14px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text-2);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.ex-chip:hover { background: rgba(86,69,212,0.08); border-color: rgba(86,69,212,0.3); color: var(--primary); }
+.ex-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* ===== 구조도 범례 ===== */
+.diagram-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    padding: 0 24px 4px;
+    margin-top: -6px;
+}
+.diagram-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-3);
+}
+.diagram-legend i {
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    display: inline-block;
+}
 
 /* ===== Result ===== */
 .result-area {
@@ -357,11 +408,11 @@ body.searched .history-header { display: none; }
     letter-spacing: 0;
 }
 
-.r-badge.badge-1 { background: rgba(66,133,244,0.1); color: #1a73e8; }
-.r-badge.badge-2 { background: rgba(161,66,244,0.1); color: #9334e6; }
-.r-badge.badge-3 { background: rgba(52,168,83,0.1); color: #1e8e3e; }
-.r-badge.badge-4 { background: rgba(250,144,62,0.1); color: #e37400; }
-.r-badge.badge-5 { background: rgba(234,67,53,0.1); color: #d93025; }
+.r-badge.badge-1 { background: rgba(26,86,219,0.10); color: var(--blue); }
+.r-badge.badge-2 { background: rgba(86,69,212,0.10); color: var(--purple); }
+.r-badge.badge-3 { background: rgba(21,127,44,0.10); color: var(--green); }
+.r-badge.badge-4 { background: rgba(194,78,0,0.10); color: var(--orange); }
+.r-badge.badge-5 { background: rgba(224,49,49,0.10); color: var(--badge-5); }
 
 .r-sent-type {
     font-size: 12px;
@@ -633,12 +684,12 @@ body.searched .history-header { display: none; }
     min-width: 28px;
 }
 
-.tS { background: rgba(66,133,244,0.1); color: #1a73e8; }
-.tV { background: rgba(192,80,77,0.1); color: #c5221f; }
-.tC { background: rgba(57,73,171,0.1); color: #3949ab; }
-.tO { background: rgba(52,168,83,0.1); color: #1e8e3e; }
-.tIO { background: rgba(161,66,244,0.1); color: #9334e6; }
-.tOC { background: rgba(250,144,62,0.1); color: #e37400; }
+.tS { background: rgba(26,86,219,0.10); color: var(--blue); }
+.tV { background: rgba(192,80,77,0.10); color: var(--red); }
+.tC { background: rgba(26,86,219,0.10); color: var(--blue); }
+.tO { background: rgba(21,127,44,0.10); color: var(--green); }
+.tIO { background: rgba(86,69,212,0.10); color: var(--purple); }
+.tOC { background: rgba(194,78,0,0.10); color: var(--orange); }
 .tM { background: rgba(0,0,0,0.045); color: var(--text-2); }
 
 .det-hr {
@@ -1023,7 +1074,8 @@ body.searched .history-section { max-width: 1120px; margin: 0 auto 20px; }
     /* 결과 헤더: 세로 스택(제목 위, 검색창 아래) — 겹침 방지 */
     body.searched .topbar { padding: 10px 20px; margin: -28px -20px 20px; }
     body.searched .topbar-main { position: static; flex-direction: column; align-items: stretch; gap: 10px; }
-    body.searched .logo { position: static; transform: none; justify-content: flex-start; }
+    body.searched .logo { position: static; transform: none; }
+    body.searched .logo-btn { justify-content: flex-start; }
     body.searched .logo-title { font-size: 17px; }
     body.searched .input-area { max-width: none; width: 100%; }
     body.searched .history-section { max-width: none; }

@@ -14,18 +14,20 @@
         <!-- 상단바: 로고 + 검색창 + 최근분석 (홈=세로 중앙 / 검색후=상단 스티키 헤더) -->
         <div class="topbar">
             <div class="topbar-main">
-                <h1 class="logo" role="button" tabindex="0" onclick="goHome()" onkeydown="if(event.key==='Enter')goHome()" aria-label="공학영어 문장 분석기 — 홈으로">
-                    <!-- 위: 작은 S│V│O 미니 구조도 -->
-                    <svg class="logo-svo" viewBox="0 0 120 26" role="img" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="6" y1="17" x2="114" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="42" y1="9" x2="42" y2="24" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="80" y1="9" x2="80" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
-                        <text x="24" y="14" text-anchor="middle" class="svo-lab" fill="#1a56db">S</text>
-                        <text x="61" y="14" text-anchor="middle" class="svo-lab" fill="#C0504D">V</text>
-                        <text x="97" y="14" text-anchor="middle" class="svo-lab" fill="#1aae39">O</text>
-                    </svg>
-                    <!-- 아래: 제목 -->
-                    <span class="logo-title">공학영어 문장 분석기</span>
+                <h1 class="logo">
+                    <button type="button" class="logo-btn" onclick="goHome()" aria-label="공학영어 문장 분석기 — 홈으로">
+                        <!-- 위: 작은 S│V│O 미니 구조도 -->
+                        <svg class="logo-svo" viewBox="0 0 120 26" role="img" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="6" y1="17" x2="114" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="42" y1="9" x2="42" y2="24" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+                            <line x1="80" y1="9" x2="80" y2="17" stroke="#C0504D" stroke-width="2" stroke-linecap="round"/>
+                            <text x="24" y="14" text-anchor="middle" class="svo-lab" fill="#1a56db">S</text>
+                            <text x="61" y="14" text-anchor="middle" class="svo-lab" fill="#C0504D">V</text>
+                            <text x="97" y="14" text-anchor="middle" class="svo-lab" fill="#157f2c">O</text>
+                        </svg>
+                        <!-- 아래: 제목 -->
+                        <span class="logo-title">공학영어 문장 분석기</span>
+                    </button>
                 </h1>
 
                 <!-- 입력 -->
@@ -38,14 +40,23 @@
                             autocomplete="off"
                             spellcheck="false"
                             lang="en"
-                            inputmode="latin"
-                            oninput="this.value=this.value.replace(/[^\x20-\x7E]/g,'')"
+                            aria-label="분석할 영어 문장"
+                            oninput="if(!event.isComposing){this.value=this.value.replace(/[^\x20-\x7E]/g,'')}"
                             onkeydown="if(event.key==='Enter')go()"
                         >
                         <button class="btn-analyze" onclick="go()">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                             <span>분석</span>
                         </button>
+                    </div>
+                    <!-- 홈 안내 + 예시 (검색 후 숨김) -->
+                    <div class="home-extra">
+                        <p class="home-hint">영어 문장을 입력하면 <strong>5형식 분석</strong>과 <strong>구조도</strong>를 보여드려요.</p>
+                        <div class="example-chips">
+                            <button type="button" class="ex-chip" onclick="runExample(this.textContent)">She gave him a book.</button>
+                            <button type="button" class="ex-chip" onclick="runExample(this.textContent)">The stars shine.</button>
+                            <button type="button" class="ex-chip" onclick="runExample(this.textContent)">I make you happy.</button>
+                        </div>
                     </div>
                 </div>
             </div>

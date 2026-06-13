@@ -80,7 +80,7 @@ const _FONT_MOD = '400 13px ' + _FONT_STACK;
 const _RK = {
     line: '#C0504D',                        // 주절(주성분) 빨강 선 — 교재 동일
     sub: '#37352f',                          // 종속·수식 검정 선 (밝은 배경=교재처럼 검정)
-    S: '#1a56db', V: '#C0504D', O: '#1aae39', IO: '#5645d4', OC: '#dd5b00', C: '#1a56db',
+    S: '#1a56db', V: '#C0504D', O: '#157f2c', IO: '#5645d4', OC: '#c24e00', C: '#1a56db',
     mod: '#37352f', restored: '#a4a097',    // 수식어 텍스트=검정 / 생략복원=연회색
 };
 
@@ -476,6 +476,13 @@ function render(R) {
             <div class="r-diagram-wrap">
                 <div class="r-diagram">${diagramSVG}</div>
             </div>
+            <div class="diagram-legend">
+                <span><i style="background:${_RK.S}"></i>주어</span>
+                <span><i style="background:${_RK.V}"></i>동사</span>
+                <span><i style="background:${_RK.O}"></i>목적어</span>
+                <span><i style="background:${_RK.OC}"></i>보어</span>
+                <span><i style="background:${_RK.sub}"></i>수식어</span>
+            </div>
             <div class="r-explanation">${explanation}</div>
             ${renderClauses(R)}
             <div class="r-detail">${det.join('<br>')}</div>
@@ -519,6 +526,13 @@ function go() {
     // 비동기 맞춤법/문법 체크
     checkSpelling(v);
     window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+// 예시 칩 클릭 → 입력 후 분석
+function runExample(s) {
+    const inp = document.getElementById('inp');
+    if (inp) inp.value = String(s).trim();
+    go();
 }
 
 // 로고 클릭 → 홈(처음 화면)으로 복귀
@@ -700,13 +714,13 @@ async function checkSpelling(text, keepOpen) {
                 : `<span class="spell-orig">${esc(orig)}</span>`;
             return `<div class="spell-item">
                 <span class="spell-msg">${fix} <span class="spell-desc">${esc(m.message)}</span></span>
-                ${suggestion ? `<button class="spell-apply" onclick="applyFix(${m.offset},${m.length},'${esc(suggestion).replace(/'/g,"\\'")}')">적용</button>` : ''}
+                ${suggestion ? `<button class="spell-apply" data-offset="${m.offset}" data-length="${m.length}" data-fix="${esc(suggestion)}">적용</button>` : ''}
             </div>`;
         }).join('');
 
         container.innerHTML = `
             <div class="spell-section${keepOpen ? ' spell-open' : ''}">
-                <div class="spell-summary" onclick="this.parentElement.classList.toggle('spell-open')">
+                <div class="spell-summary">
                     <span class="spell-icon">!</span>
                     <span>${count}개의 오류가 발견되었습니다</span>
                     <span class="spell-toggle">펼치기</span>
@@ -738,8 +752,20 @@ function applyFix(offset, length, fix) {
 
 
 // ================================================================
-//  초기화: 히스토리 렌더
+//  초기화 + 위임 이벤트 (맞춤법 적용/펼치기 — 인라인 핸들러 대신 data속성)
 // ================================================================
 document.addEventListener('DOMContentLoaded', function() {
     renderHistory();
+});
+
+document.addEventListener('click', function(e) {
+    const apply = e.target.closest('.spell-apply');
+    if (apply) {
+        applyFix(parseInt(apply.dataset.offset, 10), parseInt(apply.dataset.length, 10), apply.dataset.fix);
+        return;
+    }
+    const summary = e.target.closest('.spell-summary');
+    if (summary && summary.parentElement) {
+        summary.parentElement.classList.toggle('spell-open');
+    }
 });
