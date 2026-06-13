@@ -13,8 +13,22 @@
     <div class="app">
         <!-- 헤더 -->
         <header class="header">
-            <h1 class="logo">공학영어 문장 분석기</h1>
-            <p class="tagline">강광현 제작</p>
+            <h1 class="logo" aria-label="공학영어 문장 분석기 — 강광현 제작">
+                <svg class="logo-svg" viewBox="0 0 384 90" role="img" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 빨강 baseline -->
+                    <line x1="8" y1="44" x2="376" y2="44" stroke="#C0504D" stroke-width="3" stroke-linecap="round"/>
+                    <!-- 세로 구분선(십자) : 공학영어 | 문장 | 분석기 -->
+                    <line x1="150" y1="22" x2="150" y2="58" stroke="#C0504D" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="238" y1="24" x2="238" y2="44" stroke="#C0504D" stroke-width="3" stroke-linecap="round"/>
+                    <!-- 제목 분절 -->
+                    <text x="79" y="36" text-anchor="middle" class="logo-seg">공학영어</text>
+                    <text x="194" y="36" text-anchor="middle" class="logo-seg">문장</text>
+                    <text x="307" y="36" text-anchor="middle" class="logo-seg">분석기</text>
+                    <!-- 강광현 제작 : \ 사선으로 매달린 수식어 -->
+                    <line x1="300" y1="50" x2="311" y2="62" stroke="#9a8f8a" stroke-width="2" stroke-linecap="round"/>
+                    <text x="316" y="66" class="logo-by">강광현 제작</text>
+                </svg>
+            </h1>
         </header>
 
         <!-- 입력 -->
@@ -35,6 +49,9 @@
             </div>
         </div>
 
+        <!-- 최근 분석 (검색창 바로 아래) -->
+        <div id="history-area"></div>
+
         <!-- 맞춤법/문법 체크 (결과 위) -->
         <div id="spell-area"></div>
 
@@ -47,9 +64,6 @@
                 <p>문장을 입력하면 구조도가 여기에 표시됩니다</p>
             </div>
         </div>
-
-        <!-- 히스토리 -->
-        <div id="history-area"></div>
 
     </div>
 

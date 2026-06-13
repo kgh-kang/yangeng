@@ -91,9 +91,9 @@ body::after {
 
 /* ===== Layout ===== */
 .app {
-    max-width: 960px;
+    max-width: 1120px;
     margin: 0 auto;
-    padding: 48px 32px 96px;
+    padding: 48px 40px 96px;
     position: relative;
     z-index: 1;
 }
@@ -108,24 +108,31 @@ body::after {
     display: none;
 }
 
+/* 로고 — 제목 자체가 미니 Reed-Kellogg 구조도 (제목 분절 + 강광현 제작이 \수식어로 매달림) */
 .logo {
-    font-size: 30px;
+    display: inline-block;
+    line-height: 0;
+}
+.logo-svg {
+    width: 384px;
+    max-width: 100%;
+    height: auto;
+}
+.logo-seg {
+    font-family: 'Noto Sans KR', 'Inter', sans-serif;
+    font-size: 27px;
     font-weight: 700;
-    color: var(--text);
     letter-spacing: -0.5px;
-    line-height: 1.3;
-    background: var(--gem-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    fill: var(--text);
 }
-
-.tagline {
-    font-size: 13px;
-    font-weight: 400;
-    color: var(--text-3);
-    margin-top: 6px;
+.logo-by {
+    font-family: 'Noto Sans KR', 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    font-style: italic;
+    fill: var(--text-3);
 }
+.tagline { display: none; }
 
 /* ===== Input — Gemini chat bar ===== */
 .input-area {
@@ -746,7 +753,8 @@ body::after {
 
 /* ===== History ===== */
 .history-section {
-    margin-top: 28px;
+    max-width: 720px;
+    margin: -24px auto 36px;
 }
 
 .history-header {
@@ -778,9 +786,15 @@ body::after {
 
 .history-list {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;          /* 한 줄만 표시 */
     gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
 }
+.history-list::-webkit-scrollbar { display: none; }   /* 스크롤바 숨김 */
+.history-item { flex: none; }   /* 칩이 줄어들지 않게 */
 
 .history-item {
     padding: 6px 16px;
@@ -799,9 +813,9 @@ body::after {
 }
 
 .history-item:hover {
-    background: rgba(66,133,244,0.06);
-    border-color: rgba(66,133,244,0.2);
-    color: var(--gem-blue);
+    background: rgba(86,69,212,0.06);
+    border-color: rgba(86,69,212,0.3);
+    color: var(--primary);
 }
 
 /* ===== Multi-clause ===== */

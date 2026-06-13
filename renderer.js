@@ -234,7 +234,8 @@ function buildDiagramSVG(R, opts) {
         else if (c.sepAfter === 'slash') parts.push(_line(bx, lineY, bx + 22, textTop, 2.5, MC)); // 보어 / 사선
     });
     // 수식어 블록 (교재처럼 baseline 바로 아래 가로 배치 — 별도 stem 없이 각 수식어가 직접 매닲)
-    let maxBottom = lineY;
+    // S-V 관통선(through)이 baseline 아래 12px까지 내려가므로 높이에 반영(선 돌출/클리핑 방지)
+    let maxBottom = lineY + 13;
     cells.forEach(c => {
         if (!c.mods || !c.mods.length) return;
         const blk = _modBlockSVG(c.mods, c.cx, lineY + 2);
