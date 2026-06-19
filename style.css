@@ -301,6 +301,17 @@ body[data-mode="json"] #text-input { display: none; }
 body[data-mode="json"] .home-extra { display: none; }
 body.searched .mode-tabs, body.searched .json-input { display: none; }
 
+.seed-row { display: flex; gap: 8px; width: 100%; }
+.seed-row input {
+    flex: 1; padding: 11px 16px; border: 1px solid var(--card-border); border-radius: 12px;
+    background: var(--bg-surface); color: var(--text); font-size: 14px; box-shadow: var(--shadow-md);
+}
+.seed-row input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(86,69,212,0.12); }
+.btn-seed {
+    flex: 0 0 auto; padding: 0 18px; border: 1px solid var(--card-border); border-radius: 12px;
+    background: var(--bg-surface); color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.btn-seed:hover { border-color: var(--primary); color: var(--primary); }
 #json-area {
     width: 100%; min-height: 150px; resize: vertical;
     padding: 14px 18px; border: 1px solid var(--card-border); border-radius: 16px;

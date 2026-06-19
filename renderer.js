@@ -650,6 +650,35 @@ function _jsonError(msg) {
     document.getElementById('result').innerHTML =
         `<div class="result-notice">${msg}</div>`;
 }
+// flat R(로컬 파서) → 트리 JSON 스키마 (초안 생성용)
+function RToTreeJSON(R) {
+    if (!R) return null;
+    const ms = a => (Array.isArray(a) ? a : []).filter(Boolean);
+    const node = {
+        orig: R.orig || '', type: R.type || '', typeKo: R.typeKo || '',
+        verbStyle: R.verbStyle || '', sentType: R.sentType || '평서문'
+    };
+    node.S = { w: (R.sub && R.sub.head) || '', mods: ms(R.sub && R.sub.mods) };
+    node.V = { w: R.verb || '', mods: ms(R.modV) };
+    if (R.type === '2형식') node.C = { w: (R.comp && R.comp.head) || '', mods: ms(R.comp && R.comp.mods) };
+    else if (R.type === '3형식') node.O = { w: (R.obj && R.obj.head) || '', mods: ms(R.obj && R.obj.mods) };
+    else if (R.type === '4형식') { node.IO = { w: (R.io && R.io.head) || '', mods: ms(R.io && R.io.mods) }; node.O = { w: (R.obj && R.obj.head) || '', mods: ms(R.obj && R.obj.mods) }; }
+    else if (R.type === '5형식') { node.O = { w: (R.obj && R.obj.head) || '', mods: ms(R.obj && R.obj.mods) }; node.OC = { w: (R.oc && R.oc.head) || '', mods: ms(R.oc && R.oc.mods) }; }
+    return node;
+}
+// 문장 입력 → 로컬 파서로 JSON 초안 생성 → 텍스트영역에 채우고 미리보기
+function seedFromSentence() {
+    const inp = document.getElementById('seed-inp'), ta = document.getElementById('json-area');
+    if (!inp || !ta) return;
+    const s = inp.value.trim();
+    if (!s) { inp.focus(); return; }
+    let R = null;
+    try { R = (typeof parse === 'function') ? parse(s) : null; } catch (e) { R = null; }
+    if (!R || !R.type) { _jsonError('문장에서 초안을 만들지 못했어요. 직접 JSON을 작성하거나 다른 문장으로 시도해 보세요.'); return; }
+    ta.value = JSON.stringify(RToTreeJSON(R), null, 2);
+    livePreview();
+    ta.focus();
+}
 function drawJSON() {
     const ta = document.getElementById('json-area');
     if (!ta) return;
