@@ -8,9 +8,11 @@
   - **보어/OC 사선 방향** ╱→╲(좌상→우하) 교재 일치(2·5형식 공통).
   - **수식어 가로 나란히**: 단어+구 수식어를 입력순 가로 배치(readings의 \simultaneous 옆 from 등).
   - **종속절 대괄호 라벨 제거**: `[형용사절 N형식]` → 미니 절만(교재 방식). 연결어 있을 때만 작게 표기.
-- **미지원 구조 2개 확인(향후 확장 과제)**:
-  - 복합술어(⑥ steer/track/help — 1주어 다동사 병렬): 절 단위 등위 필요.
-  - 보어=분사절(⑫ 진행형 is testing X, ③ 수동분사 called X receivers): C/OC가 목적어를 거느리는 구조.
+- **렌더러 2개 구조 확장 완료**:
+  - **복합술어**(⑥ steer/track/help): 절노드 `andPreds:[술어노드…]` → 술어별 baseline 세로 스택 + 좌측 점선 `and`. (`_rkCompound`)
+  - **보어/OC=미니술어**(⑫ 진행형 `is testing│system`, ⑥ help 5형식 OC 원형부정사 `(to)avoid│collisions`): C/OC `{part|verb|inf,obj,mods}` → `보어│목적어` 받침. (`_isPred`/`_rkClauseSingle`)
+  - 검증: 기본 9개 + GPS ①②④⑤⑥⑦⑧⑨⑩⑫ 교재 일치(회귀 정상).
+- **UI 정리**: JSON 모드 seed-row를 가벼운 보조 라인으로(메인=textarea). **헤더 로고(S│V│O 미니 SVG) 제거** → 제목 텍스트만(클릭 시 홈). 관련 CSS(`.logo-svo`/`.svo-lab`) 정리.
 
 ## 2026-06-19 — 스크린샷→JSON 워크플로 + 전치사구 ㄴ 받침 표기 (세션 16)
 

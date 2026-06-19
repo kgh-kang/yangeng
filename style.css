@@ -139,8 +139,7 @@ body.searched .logo {
     left: 0; top: 50%;
     transform: translateY(-50%);
 }
-body.searched .logo-btn { flex-direction: row; align-items: center; gap: 9px; }
-body.searched .logo-svo { display: none; }   /* 헤더에선 로고 이미지 숨김(제목만) */
+body.searched .logo-btn { align-items: center; }
 body.searched .logo-title { font-size: 18px; letter-spacing: -0.4px; white-space: nowrap; }
 body.searched .input-area { width: 100%; max-width: 540px; margin: 0; min-width: 0; }
 body.searched .input-wrap { max-width: none; margin: 0; box-shadow: var(--shadow-sm); padding: 4px 4px 4px 0; }
@@ -150,13 +149,11 @@ body.searched .btn-analyze { padding: 10px 22px; }
 body.searched .history-section { max-width: none; margin: 0; }
 body.searched .history-header { display: none; }
 
-/* 로고 — h1(제목 의미) > button(홈 이동). 위 S│V│O 미니 구조도 + 아래 제목 (시안 D) */
-.logo { display: inline-block; line-height: 0; }
+/* 로고 — h1(제목 의미) > button(홈 이동). 제목 텍스트만(미니 구조도 제거) */
+.logo { display: inline-block; line-height: 1.1; }
 .logo-btn {
     display: inline-flex;
-    flex-direction: column;
     align-items: center;
-    gap: 6px;
     line-height: 1.1;
     background: none;
     border: none;
@@ -165,15 +162,6 @@ body.searched .history-header { display: none; }
     font: inherit;
     color: inherit;
     cursor: pointer;
-}
-.logo-svo {
-    width: 124px;
-    height: auto;
-}
-.svo-lab {
-    font-family: 'Inter', sans-serif;
-    font-size: 11px;
-    font-weight: 700;
 }
 .logo-title {
     font-family: 'Noto Sans KR', 'Inter', sans-serif;
@@ -1078,7 +1066,6 @@ body.searched .history-section { max-width: 1120px; margin: 0 auto 20px; }
 @media (max-width: 768px) {
     .app { padding: 28px 20px 56px; }
     .logo-title { font-size: 26px; }
-    .logo-svo { width: 108px; }
     .input-wrap { max-width: 100%; }
     /* 결과 헤더: 세로 스택(제목 위, 검색창 아래) — 겹침 방지 */
     body.searched .topbar { padding: 10px 20px; margin: -28px -20px 20px; }
@@ -1103,7 +1090,6 @@ body.searched .history-section { max-width: 1120px; margin: 0 auto 20px; }
 @media (max-width: 480px) {
     .app { padding: 20px 14px 44px; }
     .logo-title { font-size: 22px; }
-    .logo-svo { width: 100px; }
     .input-wrap { border-radius: 18px; padding: 4px 4px 4px 0; }
     #inp { padding: 12px 16px; font-size: 15px; min-width: 0; }
     .btn-analyze { padding: 10px 16px; }
