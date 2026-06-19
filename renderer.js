@@ -727,29 +727,30 @@ function _g(dx, dy, inner) { return `<g transform="translate(${(+dx).toFixed(1)}
 function _wn(x) { return (x && typeof x === 'object') ? { w: x.w || x.head || '', mods: x.mods || [] } : { w: x || '', mods: [] }; }
 function _mfont(sz) { return '600 ' + sz + 'px ' + _FONT_STACK; }
 
-// 수식어 묶음(워드 가로 + 구 세로) — local (0,0) 기준 → {svg,w,h}
+// 수식어 묶음(워드 가로 + 구 세로) — local (0,0) 기준 → {svg,w,h,wordW}
+//   wordW = 단어 수식어 행 폭(셀 폭 산정용; 구 수식어는 아래로 흘려 셀을 늘리지 않음)
 function _rkMods(mods, sz) {
-    if (!mods || !mods.length) return { svg: '', w: 0, h: 0 };
-    const msz = Math.max(11, sz - 6);
+    if (!mods || !mods.length) return { svg: '', w: 0, h: 0, wordW: 0 };
+    const msz = Math.max(12, sz - 5);
     const words = mods.filter(m => typeof m === 'string');
     const phrases = mods.filter(m => m && typeof m === 'object');
-    let svg = '', w = 0, y = 0;
+    let svg = '', w = 0, y = 0, wordW = 0;
     if (words.length) {                       // 단어 수식어: \word 가로 나열
         let x = 0;
         words.forEach(m => {
             const restored = /^\(/.test(m);
-            svg += _line(x, 3, x + 8, 12, 1.6, _RK.sub);
-            svg += _txt(x + 11, 13, m, msz, restored ? _RK.restored : _RK.mod, restored);
-            x += 14 + _measure(m, '400 ' + msz + 'px ' + _FONT_STACK);
+            svg += _line(x, 4, x + 9, 14, 1.8, _RK.sub);
+            svg += _txt(x + 12, 15, m, msz, restored ? _RK.restored : _RK.mod, restored);
+            x += 16 + _measure(m, '400 ' + msz + 'px ' + _FONT_STACK);
         });
-        w = x; y = msz + 8;
+        wordW = x; w = x; y = msz + 10;
     }
     phrases.forEach(p => {                     // 구 수식어: 세로로 스택
         const r = _rkPhrase(p, sz);
         svg += _g(0, y, r.svg);
-        y += r.h + 6; if (r.w > w) w = r.w;
+        y += r.h + 8; if (r.w > w) w = r.w;
     });
-    return { svg, w, h: y };
+    return { svg, w, h: y, wordW };
 }
 
 // 구 수식어 1개 (전치사구/분사구문/to부정사/종속절) — local (0,0) → {svg,w,h}
@@ -775,12 +776,13 @@ function _rkPhrase(p, sz) {
     const obj = _wn(p.obj || (p.inf ? { w: p.verb, mods: p.mods } : ''));
     const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
     const objW = _measure(obj.w, '400 ' + msz + 'px ' + _FONT_STACK);
-    const sepX = labW + 14;
+    const labX = 8;                                           // 라벨 시작(다리 오른쪽)
+    const sepX = labX + labW + 12;
     const objX = sepX + 10;
     const baseY = 16, textY = 12;
     let svg = '';
-    svg += _line(6, -4, 6, baseY, 1.8, K);                     // 부모→받침대 수직 연결 다리
-    svg += _txt(4, textY, label, msz, _RK.mod);               // 전치사/분사/to (일반색)
+    svg += _line(1, -4, 1, baseY, 1.8, K);                     // 부모→받침대 수직 연결 다리(라벨 왼쪽)
+    svg += _txt(labX, textY, label, msz, _RK.mod);            // 전치사/분사/to (일반색)
     svg += _line(sepX, 3, sepX, baseY, 1.8, K);               // 라벨│목적어 구분
     svg += _txt(objX, textY, obj.w, msz, _RK.mod);            // 목적어
     const baseRight = objX + objW + 8;
@@ -804,11 +806,11 @@ function _rkClause(node, opt) {
     const cells = [];
     order.forEach(([role, color]) => { const v = get(role); if (v !== undefined && v !== null && (typeof v === 'string' ? v : (v.w || v.head))) cells.push({ role, color, node: _wn(v) }); });
     if (!cells.length) return { svg: '', w: 0, h: 0 };
-    // 셀별 폭 + 수식어 블록
+    // 셀 폭 = 머리단어 vs 수식어 트리 폭 중 큰 쪽(겹침 방지). 여백은 작게.
     cells.forEach(c => {
         c.headW = _measure(c.node.w, _mfont(sz));
         c.mb = _rkMods(c.node.mods, sz);
-        c.cellW = Math.max(c.headW, c.mb.w) + sz * 0.9 + 8;
+        c.cellW = Math.max(c.headW, c.mb.w) + sz * 0.5 + 10;
     });
     let x = 0; cells.forEach(c => { c.x = x; c.cx = x + c.cellW / 2; x += c.cellW; });
     const totalW = x;
@@ -827,17 +829,20 @@ function _rkClause(node, opt) {
         else if (prev.role === 'S') svg += _line(bx, baseY - sz - 2, bx, baseY + sz * 0.6, 2.2, mc);          // S│V 관통
         else svg += _line(bx, baseY - sz - 2, bx, baseY, 2.2, mc);                                            // 반선
     });
-    let maxBottom = baseY + 14;
-    cells.forEach(c => {                                      // 셀 아래 수식어
+    let maxBottom = baseY + 16, maxRight = totalW;
+    cells.forEach(c => {                                      // 셀 아래 수식어 (셀 중앙 정렬)
         if (!c.mb.h) return;
-        svg += _g(c.x + 6, baseY + 4, c.mb.svg);
-        const b = baseY + 4 + c.mb.h; if (b > maxBottom) maxBottom = b;
+        const mx = Math.max(c.x + 6, c.cx - c.mb.w / 2);
+        svg += _line(c.cx, baseY, c.cx, baseY + 6, 1.8, _RK.sub);   // 본선 중앙→수식어 연결 다리
+        svg += _g(mx, baseY + 6, c.mb.svg);
+        const b = baseY + 6 + c.mb.h; if (b > maxBottom) maxBottom = b;
+        const r = mx + c.mb.w; if (r > maxRight) maxRight = r;
     });
-    return { svg, w: totalW, h: maxBottom };
+    return { svg, w: maxRight, h: maxBottom };
 }
 
 function buildTreeSVG(node) {
-    const r = _rkClause(node, { size: 22, color: _RK.line });
+    const r = _rkClause(node, { size: 18, color: _RK.line });
     const W = Math.ceil(r.w + 10), H = Math.ceil(r.h + 10);
     return `<svg class="rk-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family='${_FONT_STACK}'>${_g(5, 5, r.svg)}</svg>`;
 }
