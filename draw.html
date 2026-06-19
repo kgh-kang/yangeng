@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>답안지 그리기 — 드래그 구조도 에디터</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--primary:#5645d4;--red:#C0504D;--ink:#1a1a1a;--bg:#f6f5f4;--card:#fff;--hair:#e5e3df;--steel:#787671}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter','Noto Sans KR',sans-serif;background:var(--bg);color:var(--ink);padding:18px}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:18px;font-weight:700;margin-bottom:2px}
+  .sub{color:var(--steel);font-size:12.5px;margin-bottom:14px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--card);border:1px solid var(--hair);border-radius:12px;padding:10px;margin-bottom:12px}
+  .tb-sep{width:1px;height:24px;background:var(--hair);margin:0 4px}
+  button.t{font-family:inherit;font-size:12.5px;padding:7px 12px;border-radius:8px;border:1px solid var(--hair);background:var(--card);color:var(--ink);cursor:pointer}
+  button.t:hover{border-color:#c8c4be}
+  button.t.pri{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .swatch{width:24px;height:24px;border-radius:6px;border:2px solid #fff;box-shadow:0 0 0 1px var(--hair);cursor:pointer}
+  .swatch.sel{box-shadow:0 0 0 2px var(--primary)}
+  .hint{font-size:12px;color:var(--steel);margin-left:auto}
+  .stage{background:var(--card);border:1px solid var(--hair);border-radius:12px;overflow:auto}
+  svg{display:block;background:#fff;touch-action:none}
+  text{cursor:move;user-select:none}
+  .sel-box{fill:none;stroke:var(--primary);stroke-width:1;stroke-dasharray:4 3}
+  .handle{fill:#fff;stroke:var(--primary);stroke-width:1.5;cursor:pointer}
+  .editrow{margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--steel)}
+  .editrow input{font-family:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--hair);border-radius:7px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>답안지 그리기 <span style="font-size:12px;color:var(--steel);font-weight:400">— 드래그로 직접 배치하는 구조도 에디터</span></h1>
+  <p class="sub">단어/선을 추가하고 드래그해 배치하세요. 단어 더블클릭=글자 수정, 선 선택 시 끝점 드래그. 색은 역할별로 고르면 됩니다.</p>
+
+  <div class="toolbar">
+    <button class="t" onclick="addText()">+ 단어</button>
+    <button class="t" onclick="addLine('h')">+ 가로선</button>
+    <button class="t" onclick="addLine('v')">+ 세로선(관통·반선)</button>
+    <button class="t" onclick="addLine('d')">+ 사선(보어)</button>
+    <span class="tb-sep"></span>
+    <span style="font-size:12px;color:var(--steel)">색</span>
+    <span class="swatch" style="background:#1a56db" data-c="#1a56db" title="주어"></span>
+    <span class="swatch" style="background:#C0504D" data-c="#C0504D" title="동사/주선"></span>
+    <span class="swatch" style="background:#157f2c" data-c="#157f2c" title="목적어"></span>
+    <span class="swatch" style="background:#c24e00" data-c="#c24e00" title="보어"></span>
+    <span class="swatch sel" style="background:#37352f" data-c="#37352f" title="수식어/검정"></span>
+    <span class="swatch" style="background:#a4a097" data-c="#a4a097" title="생략복원(연회색)"></span>
+    <span class="tb-sep"></span>
+    <button class="t" onclick="delSel()">선택 삭제</button>
+    <button class="t" onclick="clearAll()">전체 삭제</button>
+    <span class="tb-sep"></span>
+    <button class="t" onclick="exportPNG()">PNG 내보내기</button>
+    <button class="t" onclick="saveJSON()">저장</button>
+    <button class="t" onclick="document.getElementById('loadf').click()">불러오기</button>
+    <input type="file" id="loadf" accept="application/json" style="display:none" onchange="loadJSON(this)">
+    <span class="hint">선택: Del 삭제 · 더블클릭 글자수정</span>
+  </div>
+
+  <div class="stage"><svg id="cv" width="1140" height="600" viewBox="0 0 1140 600"></svg></div>
+
+  <div class="editrow" id="editrow"></div>
+</div>
+
+<script>
+const SVG='http://www.w3.org/2000/svg';
+let els=[];           // {id,type:'text'|'line', ...}
+let nid=1, sel=null, curColor='#37352f', italic=false;
+const cv=document.getElementById('cv');
+const snap=v=>Math.round(v/2)*2;
+
+function addText(){ const e={id:nid++,type:'text',x:520,y:200,text:'단어',color:curColor,size:22,bold:true,italic:false}; els.push(e); sel=e.id; render(); editText(e); }
+function addLine(kind){
+  let e={id:nid++,type:'line',color:curColor,w:2.4};
+  if(kind==='h'){Object.assign(e,{x1:440,y1:280,x2:700,y2:280});}
+  else if(kind==='v'){Object.assign(e,{x1:540,y1:250,x2:540,y2:310});}
+  else {Object.assign(e,{x1:560,y1:300,x2:600,y2:270});}
+  els.push(e); sel=e.id; render();
+}
+function delSel(){ if(sel==null)return; els=els.filter(e=>e.id!==sel); sel=null; render(); }
+function clearAll(){ if(confirm('전체 삭제할까요?')){els=[];sel=null;render();} }
+function getSel(){ return els.find(e=>e.id===sel); }
+
+function render(){
+  let s='';
+  els.forEach(e=>{
+    if(e.type==='line'){
+      s+=`<line data-id="${e.id}" x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="${e.color}" stroke-width="${e.w}" stroke-linecap="round" style="cursor:move"/>`;
+    } else {
+      s+=`<text data-id="${e.id}" x="${e.x}" y="${e.y}" font-size="${e.size}" font-weight="${e.bold?700:400}" fill="${e.color}" font-family="Inter, 'Noto Sans KR', sans-serif"${e.italic?' font-style="italic"':''}>${esc(e.text)}</text>`;
+    }
+  });
+  // 선택 표시
+  const se=getSel();
+  if(se){
+    if(se.type==='line'){
+      s+=`<circle class="handle" data-h="1" cx="${se.x1}" cy="${se.y1}" r="5"/><circle class="handle" data-h="2" cx="${se.x2}" cy="${se.y2}" r="5"/>`;
+    } else {
+      const bb=textBBox(se);
+      s+=`<rect class="sel-box" x="${bb.x-4}" y="${bb.y-3}" width="${bb.w+8}" height="${bb.h+6}" rx="3"/>`;
+    }
+  }
+  cv.innerHTML=s;
+  editRow();
+}
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function textBBox(e){ // 근사 측정
+  const w=approxW(e.text,e.size,e.bold); return {x:e.x, y:e.y-e.size*0.8, w, h:e.size*1.05};
+}
+let _mc;
+function approxW(t,size,bold){ try{_mc=_mc||document.createElement('canvas');const c=_mc.getContext('2d');c.font=`${bold?700:400} ${size}px Inter, 'Noto Sans KR', sans-serif`;return c.measureText(t).width;}catch(e){return (t||'').length*size*0.6;} }
+
+// ===== 드래그 =====
+let drag=null;
+cv.addEventListener('pointerdown',ev=>{
+  const t=ev.target;
+  const pt=svgPt(ev);
+  if(t.classList.contains('handle')){ const h=t.getAttribute('data-h'); drag={mode:'handle',h,startX:pt.x,startY:pt.y}; cv.setPointerCapture(ev.pointerId); return; }
+  const id=t.getAttribute&&t.getAttribute('data-id');
+  if(id){ sel=+id; const e=getSel(); drag={mode:'move',startX:pt.x,startY:pt.y,orig:JSON.parse(JSON.stringify(e))}; render(); cv.setPointerCapture(ev.pointerId); }
+  else { sel=null; render(); }
+});
+cv.addEventListener('pointermove',ev=>{
+  if(!drag)return; const pt=svgPt(ev); const dx=pt.x-drag.startX, dy=pt.y-drag.startY; const e=getSel(); if(!e)return;
+  if(drag.mode==='handle'){ if(drag.h==='1'){e.x1=snap(pt.x);e.y1=snap(pt.y);}else{e.x2=snap(pt.x);e.y2=snap(pt.y);} }
+  else { const o=drag.orig; if(e.type==='line'){e.x1=snap(o.x1+dx);e.y1=snap(o.y1+dy);e.x2=snap(o.x2+dx);e.y2=snap(o.y2+dy);} else {e.x=snap(o.x+dx);e.y=snap(o.y+dy);} }
+  render();
+});
+cv.addEventListener('pointerup',()=>{drag=null;});
+cv.addEventListener('dblclick',ev=>{ const id=ev.target.getAttribute&&ev.target.getAttribute('data-id'); if(id){const e=els.find(x=>x.id===+id); if(e&&e.type==='text')editText(e);} });
+function svgPt(ev){ const r=cv.getBoundingClientRect(); return {x:(ev.clientX-r.left)*(1140/r.width), y:(ev.clientY-r.top)*(600/r.height)}; }
+function editText(e){ const v=prompt('글자:',e.text); if(v!=null){e.text=v;render();} }
+document.addEventListener('keydown',e=>{ if((e.key==='Delete'||e.key==='Backspace')&&sel!=null&&!/input|textarea/i.test(document.activeElement.tagName)){delSel();} });
+
+// 색 선택
+document.querySelectorAll('.swatch').forEach(s=>s.addEventListener('click',()=>{
+  document.querySelectorAll('.swatch').forEach(x=>x.classList.remove('sel')); s.classList.add('sel');
+  curColor=s.dataset.c; const e=getSel(); if(e){e.color=curColor;render();}
+}));
+
+// 선택 요소 편집 행
+function editRow(){
+  const e=getSel(); const r=document.getElementById('editrow');
+  if(!e){r.innerHTML='<span>요소를 클릭해 선택하세요. (단어 추가→드래그, 선 추가→끝점 드래그)</span>';return;}
+  if(e.type==='text'){
+    r.innerHTML=`선택: 단어 <input id="etext" value="${esc(e.text).replace(/"/g,'&quot;')}" style="width:160px">
+      크기 <input id="esize" type="number" value="${e.size}" style="width:60px">
+      <label><input type="checkbox" id="ebold" ${e.bold?'checked':''}> 굵게</label>
+      <label><input type="checkbox" id="eital" ${e.italic?'checked':''}> 이탤릭</label>`;
+    document.getElementById('etext').oninput=ev=>{e.text=ev.target.value;render0();};
+    document.getElementById('esize').oninput=ev=>{e.size=+ev.target.value||22;render0();};
+    document.getElementById('ebold').onchange=ev=>{e.bold=ev.target.checked;render0();};
+    document.getElementById('eital').onchange=ev=>{e.italic=ev.target.checked;render0();};
+  } else {
+    r.innerHTML=`선택: 선 — 굵기 <input id="ew" type="number" step="0.2" value="${e.w}" style="width:60px"> (끝점 동그라미를 드래그해 길이/각도 조절)`;
+    document.getElementById('ew').oninput=ev=>{e.w=+ev.target.value||2;render0();};
+  }
+}
+// 편집행 입력 중엔 editRow 재생성 안 하도록 분리 렌더
+function render0(){ const r=document.getElementById('editrow'); const html=r.innerHTML; renderSVGonly(); }
+function renderSVGonly(){ const keep=document.activeElement&&document.activeElement.id; render(); if(keep){const el=document.getElementById(keep); if(el){el.focus();}} }
+
+// ===== 저장/불러오기/내보내기 =====
+function saveJSON(){ const blob=new Blob([JSON.stringify({els,nid},null,1)],{type:'application/json'}); dl(blob,'answer-key.json'); }
+function loadJSON(inp){ const f=inp.files[0]; if(!f)return; const rd=new FileReader(); rd.onload=()=>{try{const d=JSON.parse(rd.result);els=d.els||[];nid=d.nid||(els.length+1);sel=null;render();}catch(e){alert('불러오기 실패: '+e.message);}}; rd.readAsText(f); inp.value=''; }
+function exportPNG(){
+  sel=null;render();
+  const svg=cv.cloneNode(true); svg.setAttribute('xmlns',SVG);
+  const data=new XMLSerializer().serializeToString(svg);
+  const img=new Image(); const url='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(data)));
+  img.onload=()=>{ const c=document.createElement('canvas');c.width=1140*2;c.height=600*2;const cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,c.width,c.height);cx.scale(2,2);cx.drawImage(img,0,0); c.toBlob(b=>dl(b,'answer-key.png')); };
+  img.src=url;
+}
+function dl(blob,name){ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+
+render();
+</script>
+</body>
+</html>
