@@ -777,7 +777,7 @@ function _mfont(sz) { return '600 ' + sz + 'px ' + _FONT_STACK; }
 // 수식어 묶음(워드 가로 + 구 세로) — local (0,0) 기준 → {svg,w,h,wordW}
 //   wordW = 단어 수식어 행 폭(셀 폭 산정용; 구 수식어는 아래로 흘려 셀을 늘리지 않음)
 function _rkMods(mods, sz) {
-    if (!mods || !mods.length) return { svg: '', w: 0, h: 0, wordW: 0 };
+    if (!mods || !mods.length) return { svg: '', w: 0, h: 0, wordW: 0, legX: 0 };
     const msz = Math.max(12, sz - 5);
     const words = mods.filter(m => typeof m === 'string');
     const phrases = mods.filter(m => m && typeof m === 'object');
@@ -797,7 +797,9 @@ function _rkMods(mods, sz) {
         svg += _g(0, y, r.svg);
         y += r.h + 8; if (r.w > w) w = r.w;
     });
-    return { svg, w, h: y, wordW };
+    // legX = 부모 연결선이 만나야 할 x. 단어수식어는 행 중앙, 구수식어(전치사구 등)는 자체 다리(x=1)에 맞춤
+    const legX = words.length ? wordW / 2 : 1;
+    return { svg, w, h: y, wordW, legX };
 }
 
 // 구 수식어 1개 (전치사구/분사구문/to부정사/종속절) — local (0,0) → {svg,w,h}
@@ -818,22 +820,20 @@ function _rkPhrase(p, sz) {
         svg += _g(6, msz + 3, sub.svg);
         return { svg, w: Math.max(sub.w + 6, 60), h: msz + 3 + sub.h };
     }
-    // prep / part / inf : "라벨 │ 목적어" 받침대 (받침선은 목적어 아래에만 → 밑줄 느낌 제거)
+    // prep / part / inf : ㄴ(L자) 받침 — 세로 다리 + 가로 받침선 위에 "라벨 목적어"를 함께 올림(전치사구 표준)
     const label = p.prep || p.part || (p.inf ? p.inf : '');
     const obj = _wn(p.obj || (p.inf ? { w: p.verb, mods: p.mods } : ''));
     const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
     const objW = _measure(obj.w, '400 ' + msz + 'px ' + _FONT_STACK);
-    const labX = 8;                                           // 라벨 시작(다리 오른쪽)
-    const sepX = labX + labW + 12;
-    const objX = sepX + 10;
+    const labX = 9;                                           // 라벨 시작(세로 다리 오른쪽)
+    const objX = labX + labW + 8;                             // 목적어는 라벨 바로 오른쪽(구분선 없음)
     const baseY = 16, textY = 12;
+    const baseRight = objX + objW + 6;
     let svg = '';
-    svg += _line(1, -4, 1, baseY, 1.8, K);                     // 부모→받침대 수직 연결 다리(라벨 왼쪽)
-    svg += _txt(labX, textY, label, msz, _RK.mod);            // 전치사/분사/to (일반색)
-    svg += _line(sepX, 3, sepX, baseY, 1.8, K);               // 라벨│목적어 구분
-    svg += _txt(objX, textY, obj.w, msz, _RK.mod);            // 목적어
-    const baseRight = objX + objW + 8;
-    svg += _line(sepX, baseY, baseRight, baseY, 1.8, K);       // 목적어 받침선(목적어 아래만)
+    svg += _line(1, -4, 1, baseY, 1.8, K);                     // ㄴ 세로 다리(부모 본선 → 받침)
+    svg += _line(1, baseY, baseRight, baseY, 1.8, K);          // ㄴ 가로 받침선(라벨+목적어 함께 받침)
+    svg += _txt(labX, textY, label, msz, _RK.mod);            // 전치사/분사/to
+    svg += _txt(objX, textY, obj.w, msz, _RK.mod);            // 목적어 (같은 ㄴ 안)
     let h = baseY + 4, w = baseRight;
     if (obj.mods && obj.mods.length) {                         // 목적어의 수식어(관계절 포함) 재귀
         const om = _rkMods(obj.mods, sz - 1);
@@ -877,10 +877,11 @@ function _rkClause(node, opt) {
         else svg += _line(bx, baseY - sz - 2, bx, baseY, 2.2, mc);                                            // 반선
     });
     let maxBottom = baseY + 16, maxRight = totalW;
-    cells.forEach(c => {                                      // 셀 아래 수식어 (셀 중앙 정렬)
+    cells.forEach(c => {                                      // 셀 아래 수식어 (블록은 셀 안에 가두고 연결선은 ㄴ 다리에 맞춤)
         if (!c.mb.h) return;
-        const mx = Math.max(c.x + 6, c.cx - c.mb.w / 2);
-        svg += _line(c.cx, baseY, c.cx, baseY + 6, 1.8, _RK.sub);   // 본선 중앙→수식어 연결 다리
+        const mx = Math.max(c.x + 4, c.cx - c.mb.w / 2);     // 블록 중앙 정렬(셀 폭 안에 가둠 → 옆 칸 침범 방지)
+        const legAbs = mx + (c.mb.legX != null ? c.mb.legX : c.mb.w / 2);  // ㄴ 다리(또는 행 중앙)의 절대 x
+        svg += _line(legAbs, baseY, legAbs, baseY + 6, 1.8, _RK.sub);      // 본선 → 수식어 다리 연결
         svg += _g(mx, baseY + 6, c.mb.svg);
         const b = baseY + 6 + c.mb.h; if (b > maxBottom) maxBottom = b;
         const r = mx + c.mb.w; if (r > maxRight) maxRight = r;
