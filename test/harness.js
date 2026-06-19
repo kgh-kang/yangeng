@@ -80,6 +80,9 @@ const CASES = [
     ["He doesn't know.", 1, "doesn't know→1형식"],
     ["It isn't easy.", 2, "isn't+형용사→2형식"],
     ["They won't come.", 1, "won't come→1형식"],
+    // 목적격 관계사 복원 (관계절 내부 형식) — 주절 형식 검사
+    ['The book that I read was good.', 2, '목적격 관계절(I read (that))+주절2형식'],
+    ['But scouts may have a sophisticated way.', 3, '조동사 may have→3형식'],
     // ── 자잘한 보정 (세션 10) ──
     ['She reads books every day.', 3, '시간부사구 every day'],
     ['She is as smart as him.', 2, '비교 as~as'],

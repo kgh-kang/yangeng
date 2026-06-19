@@ -575,9 +575,11 @@ function splitComplex(sentence){
             if(mvi2<0) break;
             const antecedent=ante;
             const mainText=(rawWords.slice(0,r).join(' ')+' '+rawWords.slice(mvi2).join(' ')).replace(/[.,!?]+/g,'').trim();
-            const relSubjPresent=!isVerbAt(r+1); // 관계사 바로 뒤가 동사가 아니면 목적격 관계절
-            const subText=(antecedent+' '+rawWords.slice(r+1,mvi2).join(' ')).replace(/[.,!?]+/g,'').trim();
-            return {mainText, subs:[{rel:'형용사절', conn:lw[r], antecedent, text:subText, fullText:rawWords.slice(r,mvi2).join(' ').replace(/[.,!?]+/g,'')}], nounObject:false};
+            const objRel=!isVerbAt(r+1); // 관계사 바로 뒤가 동사가 아니면(주어가 옴) 목적격 관계절
+            const subText=objRel
+                ? rawWords.slice(r+1,mvi2).join(' ').replace(/[.,!?]+/g,'').trim()              // 목적격: 절 그대로(목적어 후복원)
+                : (antecedent+' '+rawWords.slice(r+1,mvi2).join(' ')).replace(/[.,!?]+/g,'').trim(); // 주격: 선행사 주어 복원
+            return {mainText, subs:[{rel:'형용사절', conn:lw[r], antecedent, objRel, text:subText, fullText:rawWords.slice(r,mvi2).join(' ').replace(/[.,!?]+/g,'')}], nounObject:false};
         }
     }
 
@@ -629,17 +631,46 @@ function mk(words,i,rel,conn,antecedent){
     const subWords=words.slice(i);
     const connLo=lo(conn).replace(/[.,!?]/g,'');
     let subText;
+    let objRel=false;
     if(rel==='명사절' && WH_NOUN.has(connLo)){
         // 간접의문: 의문사를 절 성분으로 유지한 채 파싱 (who gave ... 등)
         subText=subWords.join(' ').replace(/,/g,' ').trim();
     } else if(rel==='형용사절'){
-        // 관계절: 관계사 제거 후 선행사를 주어로 복원해 파싱
-        subText=(antecedent?antecedent+' ':'')+subWords.slice(1).join(' ').replace(/,/g,' ').trim();
+        // 주격/목적격 관계절 구분: 관계사 바로 뒤가 동사면 주격, 아니면(주어가 옴) 목적격
+        const after=subWords.slice(1);
+        const w1=after[0]?after[0].replace(/[.,!?]/g,''):'';
+        const w1l=lo(w1);
+        const subjRel = !w1 || AUX.has(w1l)||BE.has(w1l)||(isV(w1)&&!isAdj(w1));
+        if(subjRel){
+            // 주격 관계절: 선행사를 주어로 복원해 파싱 (the stars that were shining)
+            subText=(antecedent?antecedent+' ':'')+after.join(' ').replace(/,/g,' ').trim();
+        } else {
+            // 목적격 관계절: 관계사 자체가 목적어 → 절은 그대로 파싱하고 목적어는 (that)으로 복원
+            subText=after.join(' ').replace(/,/g,' ').trim();
+            objRel=true;
+        }
     } else {
         // 명사절(that/whether/if) · 부사절: 접속사 제거 후 절 파싱
         subText=subWords.slice(1).join(' ').replace(/,/g,' ').trim();
     }
-    return {mainText, subs:[{rel, conn:connLo, antecedent, text:subText, fullText:subWords.join(' ')}], nounObject: rel==='명사절'};
+    return {mainText, subs:[{rel, conn:connLo, antecedent, objRel, text:subText, fullText:subWords.join(' ')}], nounObject: rel==='명사절'};
+}
+
+// 목적격 관계절 목적어 복원: 관계사가 목적어이므로 절에 (that) 목적어를 채워 형식 재판정
+//   the Army made (that) famous → 5형식 / (the book) I read (that) → 3형식
+function restoreRelObject(res){
+    if(!res || res.obj.head) return;       // 이미 목적어 있으면(주격 등) 건너뜀
+    const objH='(that)';
+    if(res.comp.head){
+        // 보어가 있던 2형식 → 목적어 복원 시 5형식 (made famous → made (that) famous)
+        res.obj={head:objH, mods:[]};
+        res.oc=res.comp; res.comp={head:'',mods:[]};
+        res.type='5형식'; res.typeKo='복합형'; res.verbStyle="'이다'고+'하다'";
+    } else if(res.type==='1형식'){
+        // 자동사로 본 1형식 → 타동사 목적어 복원 시 3형식 (I read → I read (that))
+        res.obj={head:objH, mods:[]};
+        res.type='3형식'; res.typeKo='소유형'; res.verbStyle="'하다'";
+    }
 }
 
 // 절 인식 파서: 복문이면 주절+종속절 분리해 분석, 아니면 단문 파싱
@@ -658,6 +689,7 @@ function parseClauseAware(sentence){
     }
     main.clauses=split.subs.map(sb=>{
         const res=parse(sb.text);
+        if(res && sb.objRel) restoreRelObject(res);   // 목적격 관계사 복원 → 형식 재판정
         return res?{relation:sb.rel, connector:sb.conn, antecedent:sb.antecedent, orig:sb.fullText, result:res}:null;
     }).filter(Boolean);
     if(!main.clauses.length) return parse(sentence);
