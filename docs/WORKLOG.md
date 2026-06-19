@@ -1,5 +1,18 @@
 # 양 번역기 — 작업 로그 (WORKLOG)
 
+## 2026-06-19 — 스크린샷→JSON 워크플로 + 전치사구 ㄴ 받침 표기 (세션 16)
+
+- **워크플로 확정**: 사용자가 교재 답안지 **스크린샷**을 주면 Claude가 읽어 트리 JSON으로 변환,
+  웹 "구조도 시각화"에 붙여 검증하는 흐름. (드래그 에디터 `draw.html`·폼빌더 `builder.html`은 보조)
+- **JSON 초안 자동 생성**: JSON 모드에 문장 입력칸+`초안 생성` 버튼 추가
+  (`seedFromSentence`→로컬 `parse`→`RToTreeJSON`(flat R→트리 스키마)→텍스트영역+실시간 미리보기).
+- **전치사구 = ㄴ(L자) 받침으로 수정**(교재 표준): 기존 `전치사│목적어` 구분선 분리 →
+  세로다리+가로받침선 위에 **전치사·목적어를 함께** 표기(`_rkPhrase`). `_rkMods`에 `legX` 추가해
+  본선 연결선을 ㄴ 다리에 정렬, `_rkClause`는 수식어 블록을 셀 폭 안에 가둬 옆 칸 침범 방지.
+  - 검증: `Civilians can buy similar products from electronics companies.`(3형식) → 교재 PDF와 일치
+    (`from companies` ㄴ 묶음, `\electronics`(companies), `\similar`(products)).
+- **문서 동기화**: `docs/구문분석_프롬프트.md`(작도 규약 ㄴ 받침 규칙+예시), `docs/문법.md`(작도 규칙) 갱신.
+
 ## 2026-06-13 — 검색 흐름 개편 + 병렬 평가(UX/디자인/UI) 반영 P1~P3 (세션 15)
 
 - **흐름 개편**: 홈(로고+검색+예시+최근검색 세로중앙) ↔ 결과(상단 스티키 헤더: 제목 좌측 +
