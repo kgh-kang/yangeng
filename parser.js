@@ -46,7 +46,7 @@ const AMBI_VERBS=new Set('dance dances danced sing sings sang sung fly flies fle
 const TRANSITIVE=new Set('eat eats ate eaten drink drinks drank drunk play plays played read reads write writes wrote written study studies studied learn learns learned learnt use uses used open opens opened close closes closed start starts started stop stops stopped begin begins began begun finish finishes finished enjoy enjoys enjoyed love loves loved like likes liked hate hates hated need needs needed want wants wanted take takes took taken carry carries carried hold holds held catch catches caught hit hits break breaks broke broken build builds built cut cuts create creates created destroy destroys destroyed develop develops developed discuss discusses discussed explain explains explained improve improves improved include includes included involve involves involved meet meets met produce produces produced provide provides provided receive receives received remember remembers remembered serve serves served speak speaks spoke spoken spend spends spent support supports supported understand understands understood visit visits visited accept accepts accepted achieve achieves achieved choose chooses chose chosen describe describes described establish establishes established examine examines examined follow follows followed mention mentions mentioned obtain obtains obtained prepare prepares prepared raise raises raised suggest suggests suggested complete completes completed contain contains contained express expresses expressed manage manages managed represent represents represented solve solves solved review reviews reviewed analyze analyzes analyzed check checks checked test tests tested fix fixes fixed handle handles handled replace replaces replaced remove removes removed add adds added update updates updated submit submits submitted cancel cancels canceled confirm confirms confirmed share shares shared upload uploads uploaded download downloads downloaded install installs installed delete deletes deleted edit edits edited publish publishes published release releases released launch launches launched consider considers considered avoid avoids avoided attempt attempts attempted continue continues continued decide decides decided determine determines determined discover discovers discovered enjoy enjoys enjoyed expand expands expanded explore explores explored generate generates generated identify identifies identified indicate indicates indicated maintain maintains maintained observe observes observed perform performs performed prevent prevents prevented protect protects protected reduce reduces reduced report reports reported require requires required'.split(' '));
 
 // 보강 타동사 (DB 누락 흔한 타동사) — 句동사 어근 포함
-const EXTRA_TRANS=new Set('pull pulls pulled push pushes pushed pick picks picked turn turns turned process processes processed store stores stored generate generates generated transmit transmits transmitted compute computes computed retrieve retrieves retrieved display displays displayed execute executes executed implement implements implemented simulate simulates simulated calculate calculates calculated measure measures measured detect detects detected convert converts converted transfer transfers transferred transform transforms transformed operate operates operated control controls controlled design designs designed allow allows allowed reduce reduces reduced enable enables enabled record records recorded encode encodes encoded decode decodes decoded filter filters filtered render renders rendered collect collects collected connect connects connected link links linked affect affects affected influence influences influenced gather gathers gathered lead leads led reach reaches reached represent represents represented apply applies applied combine combines combined separate separates separated define defines defined assign assigns assigned access accesses accessed monitor monitors monitored adjust adjusts adjusted modify modifies modified extract extracts extracted insert inserts inserted steer steers steered track tracks tracked pinpoint pinpoints pinpointed broadcast broadcasts negotiate negotiates negotiated dispatch dispatches dispatched earn earns earned receive receives received'.split(' '));
+const EXTRA_TRANS=new Set('pull pulls pulled push pushes pushed pick picks picked turn turns turned process processes processed store stores stored generate generates generated transmit transmits transmitted compute computes computed retrieve retrieves retrieved display displays displayed execute executes executed implement implements implemented simulate simulates simulated calculate calculates calculated measure measures measured detect detects detected convert converts converted transfer transfers transferred transform transforms transformed operate operates operated control controls controlled design designs designed allow allows allowed reduce reduces reduced enable enables enabled record records recorded encode encodes encoded decode decodes decoded filter filters filtered render renders rendered collect collects collected connect connects connected link links linked affect affects affected influence influences influenced gather gathers gathered lead leads led reach reaches reached represent represents represented apply applies applied combine combines combined separate separates separated define defines defined assign assigns assigned access accesses accessed monitor monitors monitored adjust adjusts adjusted modify modifies modified extract extracts extracted insert inserts inserted steer steers steered track tracks tracked pinpoint pinpoints pinpointed broadcast broadcasts negotiate negotiates negotiated dispatch dispatches dispatched earn earns earned receive receives received know knows knew known mean means meant realize realizes realized recognize recognizes recognized assume assumes assumed imagine imagines imagined wonder wonders wondered doubt doubts doubted guess guesses guessed hope hopes hoped wish wishes wished'.split(' '));
 
 // ================================================================
 // 句동사(phrasal verb) — 동사+불변화사(particle)가 한 동사 (강의: take in, pull out 등)
@@ -220,7 +220,21 @@ function isV(w){
     return false;
 }
 
-function tok(s){return s.replace(/[!?.]+$/,'').replace(/,/g,' ').trim().split(/\s+/).filter(w=>w);}
+// 축약형 확장 — 부정 축약(can't/don't/isn't…)을 조동사/be+not으로 풀어 형식 판별이 되게 한다.
+function expandContractions(s){
+    return s
+        .replace(/\bcan(?:'|’)t\b/gi,'can not')   // can't
+        .replace(/\bcannot\b/gi,'can not')
+        .replace(/\bwon(?:'|’)t\b/gi,'will not')
+        .replace(/\bshan(?:'|’)t\b/gi,'shall not')
+        .replace(/\bain(?:'|’)t\b/gi,'is not')
+        .replace(/n(?:'|’)t\b/gi,' not')           // don't/doesn't/isn't/wouldn't/mustn't…
+        .replace(/\bi(?:'|’)m\b/gi,'I am')
+        .replace(/(?:'|’)re\b/gi,' are')
+        .replace(/(?:'|’)ve\b/gi,' have')
+        .replace(/(?:'|’)ll\b/gi,' will');
+}
+function tok(s){return expandContractions(s).replace(/[!?.]+$/,'').replace(/,/g,' ').trim().split(/\s+/).filter(w=>w);}
 
 // ================================================================
 // 수동태 (13주차 강의) — be + 과거분사 → 무조건 2형식(의존형)
@@ -507,7 +521,7 @@ const NCONJ=new Set('that whether if'.split(' '));
 
 function splitComplex(sentence){
     const orig=sentence.trim();
-    const rawWords=orig.replace(/[.?!]+$/,'').split(/\s+/).filter(w=>w);
+    const rawWords=expandContractions(orig).replace(/[.?!]+$/,'').split(/\s+/).filter(w=>w);
     if(rawWords.length<4) return null;
     const lw=rawWords.map(w=>lo(w).replace(/[.,!?]/g,''));
 
@@ -961,7 +975,7 @@ function parsePred(words,lw,vi,R){
         else if(parts.length>0&&(hasBe||parts.some(p=>AUX.has(lo(p))))){
             // 조동사 뒤 본동사 흡수. DB 확인 동사(give/finish 등 NLP가 형용사로 오태깅하는 것 포함)는
             // isAdj 무시하고 흡수, 그 외에는 isV+!isAdj 안전 가드.
-            if(!ART.has(lw[idx])&&!PREP.has(lw[idx])&&(isVStrict(words[idx])||(isV(words[idx])&&!isAdj(words[idx])))){
+            if(!ART.has(lw[idx])&&(isVStrict(words[idx])||(isV(words[idx])&&!isAdj(words[idx])&&!PREP.has(lw[idx])))){
                 parts.push(words[idx]);idx++;
             }
             R.verb=parts.join(' ');
@@ -984,6 +998,15 @@ function parsePred(words,lw,vi,R){
         const headVerb=vw.length?vw[vw.length-1]:lo(R.verb.split(' ').pop());
         const part=phrasalParticle(headVerb, words[idx]);
         if(part){ R.verb+=' '+words[idx]; idx++; }
+    }
+
+    // ── 부정어 'not' 분리: 동사구에서 빼 수식어로 (교재의 \not 매달림, 동사핵 판별 정확화) ──
+    {
+        const vp=R.verb.split(' ');
+        if(vp.some(w=>lo(w)==='not')){
+            R.verb=vp.filter(w=>lo(w)!=='not').join(' ');
+            R.modV.push('not');
+        }
     }
 
     // ── 수동태 감지 (be + 과거분사) → 2형식 전용 처리로 분기 ──

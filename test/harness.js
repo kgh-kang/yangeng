@@ -74,6 +74,12 @@ const CASES = [
     ['This will give the engineers a clear understanding.', 4, '조동사+수여(긴 목적어)'],
     ['We must finish the project.', 3, '조동사+finish→3형식'],
     ['She can make him happy.', 5, '조동사+사역→5형식'],
+    // 부정 축약형 (can't/don't/isn't…) — 조동사/be로 인식, not은 수식어
+    ["She can't read a book.", 3, "축약 can't→can not read"],
+    ["I don't like coffee.", 3, "do-support don't like"],
+    ["He doesn't know.", 1, "doesn't know→1형식"],
+    ["It isn't easy.", 2, "isn't+형용사→2형식"],
+    ["They won't come.", 1, "won't come→1형식"],
     // ── 자잘한 보정 (세션 10) ──
     ['She reads books every day.', 3, '시간부사구 every day'],
     ['She is as smart as him.', 2, '비교 as~as'],
