@@ -666,10 +666,32 @@ function parseClauseAware(sentence){
 }
 
 // 복수 문장 파서 — 분리 후 각각 분석 (각 절은 복문 인식)
+// with/without + 명사(전치사 목적어) + (not) 분사 = 부대상황(독립분사구문)
+//   교재: with → [주어 \ (one)보어] 중첩 2형식. 주어=명사구, 보어는 분사에서 (one) 복원, 분사·not은 수식.
+function detectWithAbsolute(R){
+    if(!R||!R.modV) return;
+    for(let i=0;i<R.modV.length;i++){
+        const m=/^(with|without)\s+(.+?)\s+(not\s+)?([a-z]+(?:ing|ed))$/i.exec(R.modV[i]);
+        if(!m) continue;
+        const npWords=m[2].split(/\s+/).filter(w=>w);
+        if(!npWords.length) continue;
+        R.withAbs={
+            prep: m[1].toLowerCase(),
+            subj: splitNP(npWords),                 // her baby → head:baby, mods:[her]
+            comp: { head:'(one)', part:m[4], neg:!!m[3] }
+        };
+        R.modV.splice(i,1);
+        break;
+    }
+}
+
 function parseMulti(sentence){
     const {parts, conjunctions}=splitSentences(sentence);
-    if(parts.length<=1) return {results:[parseClauseAware(sentence)].filter(Boolean), conjunctions:[]};
-    return {results:parts.map(s=>parseClauseAware(s)).filter(Boolean), conjunctions};
+    let results;
+    if(parts.length<=1) results=[parseClauseAware(sentence)].filter(Boolean);
+    else results=parts.map(s=>parseClauseAware(s)).filter(Boolean);
+    results.forEach(detectWithAbsolute);
+    return {results, conjunctions: parts.length<=1?[]:conjunctions};
 }
 
 // 단문 파서

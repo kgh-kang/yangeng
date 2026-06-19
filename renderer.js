@@ -181,6 +181,50 @@ function _modBlockSVG(mods, cx, startY) {
     return { svg, height: maxH, width: totalW };
 }
 
+// with-부대상황 스탠드: 동사 아래 매닲. with → [주어 \ (one)보어], 주어수식·분사·not 매닲.
+//   교재의 "with + 명사 + 분사" 작도를 재현. (cx=동사 부착 x, top=baseline y) → {svg, height, width}
+function _withAbsSVG(wa, cx, top) {
+    const K = _RK.sub;
+    let svg = '';
+    const baseY = top;                            // sub-baseline (외부 연결선이 여기로 내려옴)
+    let x = cx + 6;
+    // with
+    svg += _txt(x, baseY - 5, wa.prep, 13, _RK.mod);
+    x += _measure(wa.prep, _FONT_MOD) + 16;
+    // 주어(her baby의 head=baby)
+    const subjX = x;
+    svg += _txt(subjX, baseY - 5, wa.subj.head, 13, _RK.mod);
+    const subjW = _measure(wa.subj.head, _FONT_MOD);
+    let belowSubj = baseY;
+    (wa.subj.mods || []).forEach(mm => {           // \her
+        belowSubj += 16;
+        svg += _line(subjX + 3, belowSubj - 12, subjX + 11, belowSubj - 3, 2, K);
+        svg += _txt(subjX + 14, belowSubj - 2, mm, 12, _RK.restored);
+    });
+    x = subjX + subjW + 10;
+    // S-C 사선(주어=보어)
+    svg += _line(x, baseY - 2, x + 16, baseY - 16, 2, K);
+    x += 22;
+    // (one) 보어
+    const oneX = x;
+    svg += _txt(oneX, baseY - 5, wa.comp.head, 13, _RK.restored, true);
+    const oneW = _measure(wa.comp.head, _FONT_MOD);
+    let belowOne = baseY;
+    // \분사(빨강)
+    belowOne += 16;
+    svg += _line(oneX + 3, belowOne - 12, oneX + 11, belowOne - 3, 2, K);
+    svg += _txt(oneX + 14, belowOne - 2, wa.comp.part, 12, _RK.V);
+    const partW = _measure(wa.comp.part, _FONT_MOD);
+    if (wa.comp.neg) {                              // \not (분사 아래)
+        belowOne += 16;
+        svg += _line(oneX + 17, belowOne - 12, oneX + 25, belowOne - 3, 2, K);
+        svg += _txt(oneX + 28, belowOne - 2, 'not', 12, _RK.mod);
+    }
+    const right = Math.max(oneX + oneW, oneX + 28 + _measure('not', _FONT_MOD)) + 6;
+    svg = _line(cx, baseY, right, baseY, 2, K) + svg;   // sub-baseline(맨 뒤로 깔기 위해 앞에)
+    return { svg, height: Math.max(belowSubj, belowOne) - top + 6, width: right - cx };
+}
+
 // 메인 다이어그램 SVG 생성
 //  opts.mainColor: 메인 baseline·구분선 색. 주절=빨강(_RK.line, 기본) / 종속절=검정(_RK.sub).
 function buildDiagramSVG(R, opts) {
@@ -244,7 +288,25 @@ function buildDiagramSVG(R, opts) {
         if (bottom > maxBottom) maxBottom = bottom;
     });
 
-    const W = Math.ceil(mainW + 4), H = Math.ceil(maxBottom + 10);
+    // with-부대상황: 동사~목적어 경계에서 아래로 매닲 (교재 "with + 명사 + 분사")
+    let extraW = 0;
+    if (R.withAbs) {
+        const vCell = cells.find(c => c.key === 'V') || verb;
+        const vi = cells.indexOf(vCell);
+        const after = cells[vi + 1];
+        const attachX = after ? after.x : (vCell.cx + (vCell.cellW || 0) / 2);
+        const dropTop = lineY + 26;     // 동사 직속 수식어(\not 등) 행 아래로 내려 겹침 방지
+        // 부착점에서 수직선으로 내려 연결
+        parts.push(_line(attachX, lineY, attachX, dropTop, 2, _RK.sub));
+        const wa = _withAbsSVG(R.withAbs, attachX, dropTop);
+        parts.push(wa.svg);
+        const bottom = dropTop + wa.height;
+        if (bottom > maxBottom) maxBottom = bottom;
+        const rightEnd = attachX + wa.width + 8;
+        if (rightEnd > mainW) extraW = rightEnd - mainW;
+    }
+
+    const W = Math.ceil(mainW + extraW + 4), H = Math.ceil(maxBottom + 10);
     return `<svg class="rk-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family='${_FONT_STACK}'>${parts.join('')}</svg>`;
 }
 

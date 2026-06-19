@@ -46,6 +46,7 @@ const sents = [
     'To learn is important.',
     'The man who runs is fast.',
     'When the system fails, we restart it.',
+    "She can't read a book with her baby not sleeping.",
 ];
 const report = [];
 for (const s of sents) {
