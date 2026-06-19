@@ -1534,13 +1534,14 @@ function assignComp(tokens, R){
         R.modV.push(...tokens); return;
     }
     if(isAdjComp(tokens)){
-        let adjMods=[], advMods=[];
-        for(const t of tokens){
-            if(isAdv(t)) advMods.push(t);
-            else adjMods.push(t);
+        // 형용사 보어: 마지막 형용사를 보어 핵으로 직접 표기(교재 reading 지문 방식), 나머지는 수식어
+        let head='', mods=[];
+        for(let i=tokens.length-1;i>=0;i--){
+            if(!head && isAdj(tokens[i]) && !ART.has(lo(tokens[i]))) head=tokens[i];
+            else mods.unshift(tokens[i]);
         }
-        R.comp={head:'(one)', mods:[...adjMods,...advMods]};
-        if(!R.comp.mods.some(m=>ART.has(lo(m)))) R.comp.mods.unshift('(a)');
+        if(!head){ head=tokens[tokens.length-1]; mods=tokens.slice(0,-1); }
+        R.comp={head, mods};
     } else {
         let np=splitNP(tokens);
         R.comp=np;
