@@ -770,25 +770,26 @@ function _rkPhrase(p, sz) {
         svg += _g(6, msz + 3, sub.svg);
         return { svg, w: Math.max(sub.w + 6, 60), h: msz + 3 + sub.h };
     }
-    // prep / part / inf : "라벨 │ 목적어" 받침대
+    // prep / part / inf : "라벨 │ 목적어" 받침대 (받침선은 목적어 아래에만 → 밑줄 느낌 제거)
     const label = p.prep || p.part || (p.inf ? p.inf : '');
     const obj = _wn(p.obj || (p.inf ? { w: p.verb, mods: p.mods } : ''));
     const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
     const objW = _measure(obj.w, '400 ' + msz + 'px ' + _FONT_STACK);
-    const sepX = labW + 12;
-    const objX = sepX + 8;
+    const sepX = labW + 14;
+    const objX = sepX + 10;
+    const baseY = 16, textY = 12;
     let svg = '';
-    svg += _line(6, 0, 6, 13, 1.6, K);                         // 부모로부터 내려오는 다리
-    svg += _txt(2, 10, label, msz, p.inf ? _RK.restored : _RK.mod, !!p.inf);  // 전치사/분사/to
-    svg += _line(sepX, 2, sepX, 13, 1.6, K);                   // 라벨│목적어 구분
-    svg += _txt(objX, 10, obj.w, msz, _RK.mod);               // 목적어
-    const baseRight = objX + objW + 6;
-    svg += _line(0, 13, baseRight, 13, 1.6, K);                // 받침대 가로선
-    let h = 15, w = baseRight;
+    svg += _line(6, -4, 6, baseY, 1.8, K);                     // 부모→받침대 수직 연결 다리
+    svg += _txt(4, textY, label, msz, _RK.mod);               // 전치사/분사/to (일반색)
+    svg += _line(sepX, 3, sepX, baseY, 1.8, K);               // 라벨│목적어 구분
+    svg += _txt(objX, textY, obj.w, msz, _RK.mod);            // 목적어
+    const baseRight = objX + objW + 8;
+    svg += _line(sepX, baseY, baseRight, baseY, 1.8, K);       // 목적어 받침선(목적어 아래만)
+    let h = baseY + 4, w = baseRight;
     if (obj.mods && obj.mods.length) {                         // 목적어의 수식어(관계절 포함) 재귀
         const om = _rkMods(obj.mods, sz - 1);
-        svg += _g(objX, 15, om.svg);
-        h = 15 + om.h; w = Math.max(w, objX + om.w);
+        svg += _g(objX, baseY + 3, om.svg);
+        h = baseY + 3 + om.h; w = Math.max(w, objX + om.w);
     }
     return { svg, w, h };
 }
