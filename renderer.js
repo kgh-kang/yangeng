@@ -820,22 +820,24 @@ function _rkPhrase(p, sz) {
         svg += _g(6, msz + 3, sub.svg);
         return { svg, w: Math.max(sub.w + 6, 60), h: msz + 3 + sub.h };
     }
-    // prep / part / inf : ㄴ(L자) 받침 — 세로 다리 + 가로 받침선 위에 "라벨 목적어"를 함께 올림(전치사구 표준)
+    // prep / part / inf : ㄴ(L자) 받침 — 전치사는 세로 다리 옆(위), 목적어는 가로 받침선 위(아래). 둘 다 같은 ㄴ 안.
     const label = p.prep || p.part || (p.inf ? p.inf : '');
     const obj = _wn(p.obj || (p.inf ? { w: p.verb, mods: p.mods } : ''));
     const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
     const objW = _measure(obj.w, '400 ' + msz + 'px ' + _FONT_STACK);
-    const labX = 9;                                           // 라벨 시작(세로 다리 오른쪽)
-    const objX = labX + labW + 8;                             // 목적어는 라벨 바로 오른쪽(구분선 없음)
-    const baseY = 16, textY = 12;
-    const baseRight = objX + objW + 6;
+    const labX = 8;                                           // 전치사: 세로 다리 오른쪽(위쪽)
+    const objX = 13;                                          // 목적어: 받침선 위, 다리에서 약간 들여씀
+    const prepY = msz - 1;                                    // 전치사 baseline(상단)
+    const baseY = msz + 18;                                   // 가로 받침선 y(전치사 아래, 간격 확보)
+    const objY = baseY - 4;                                   // 목적어 baseline(받침선 위)
+    const baseRight = Math.max(labX + labW, objX + objW) + 6;
     let svg = '';
     svg += _line(1, -4, 1, baseY, 1.8, K);                     // ㄴ 세로 다리(부모 본선 → 받침)
-    svg += _line(1, baseY, baseRight, baseY, 1.8, K);          // ㄴ 가로 받침선(라벨+목적어 함께 받침)
-    svg += _txt(labX, textY, label, msz, _RK.mod);            // 전치사/분사/to
-    svg += _txt(objX, textY, obj.w, msz, _RK.mod);            // 목적어 (같은 ㄴ 안)
+    svg += _line(1, baseY, baseRight, baseY, 1.8, K);          // ㄴ 가로 받침선
+    svg += _txt(labX, prepY, label, msz, _RK.mod);           // 전치사/분사/to (다리 옆 위)
+    svg += _txt(objX, objY, obj.w, msz, _RK.mod);            // 목적어 (받침선 위)
     let h = baseY + 4, w = baseRight;
-    if (obj.mods && obj.mods.length) {                         // 목적어의 수식어(관계절 포함) 재귀
+    if (obj.mods && obj.mods.length) {                         // 목적어의 수식어(관계절 포함) → 받침선 아래
         const om = _rkMods(obj.mods, sz - 1);
         svg += _g(objX, baseY + 3, om.svg);
         h = baseY + 3 + om.h; w = Math.max(w, objX + om.w);
