@@ -56,18 +56,19 @@
                     </div>
                     <!-- JSON 시각화 입력 (data-mode=json 일 때 표시) -->
                     <div class="json-input" id="json-input">
-                        <!-- 문장 → JSON 초안 자동 생성 -->
+                        <!-- 보조: 문장 → JSON 초안 자동 생성 -->
                         <div class="seed-row">
+                            <span class="seed-label">문장으로 초안 만들기</span>
                             <input
                                 id="seed-inp"
                                 type="text"
-                                placeholder="영어 문장을 입력하면 JSON 초안을 자동 생성합니다 (그 후 아래에서 다듬기)"
+                                placeholder="영어 문장 입력 (선택)"
                                 autocomplete="off" spellcheck="false" lang="en"
                                 aria-label="JSON 초안을 만들 영어 문장"
                                 oninput="if(!event.isComposing){this.value=this.value.replace(/[^\x20-\x7E]/g,'')}"
                                 onkeydown="if(event.key==='Enter')seedFromSentence()"
                             >
-                            <button type="button" class="btn-seed" onclick="seedFromSentence()">초안 생성</button>
+                            <button type="button" class="btn-seed" onclick="seedFromSentence()">생성</button>
                         </div>
                         <textarea id="json-area" spellcheck="false" oninput="livePreview()" placeholder="위에 문장을 넣어 초안을 만들거나, Claude가 출력한 분석 JSON을 붙여넣으세요 (```json 블록째 붙여도 됨). 입력하면 아래에 실시간 미리보기가 나타납니다."></textarea>
                         <button class="btn-analyze btn-draw" onclick="drawJSON()">
