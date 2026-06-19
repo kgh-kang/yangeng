@@ -812,27 +812,25 @@ function _rkObjInline(objNode, sz) {
 function _rkMods(mods, sz) {
     if (!mods || !mods.length) return { svg: '', w: 0, h: 0, wordW: 0, legX: 0 };
     const msz = Math.max(12, sz - 5);
-    const words = mods.filter(m => typeof m === 'string');
-    const phrases = mods.filter(m => m && typeof m === 'object');
-    let svg = '', w = 0, y = 0, wordW = 0;
-    if (words.length) {                       // 단어 수식어: \word 가로 나열
-        let x = 0;
-        words.forEach(m => {
+    // 한 핵을 꾸미는 수식어는 입력 순서대로 가로로 나란히(단어 \word, 구는 ㄴ받침). 교재 방식.
+    let x = 0, svg = '', h = 0, legX = 4;
+    mods.forEach((m, i) => {
+        if (typeof m === 'string') {                       // 단어 수식어: \word
             const restored = /^\(/.test(m);
-            svg += _line(x, 4, x + 9, 14, 1.8, _RK.sub);
-            svg += _txt(x + 12, 15, m, msz, restored ? _RK.restored : _RK.mod, restored);
+            svg += _line(x, 3, x + 9, 13, 1.8, _RK.sub);
+            svg += _txt(x + 12, 14, m, msz, restored ? _RK.restored : _RK.mod, restored);
+            if (i === 0) legX = x + 3;
             x += 16 + _measure(m, '400 ' + msz + 'px ' + _FONT_STACK);
-        });
-        wordW = x; w = x; y = msz + 10;
-    }
-    phrases.forEach(p => {                     // 구 수식어: 세로로 스택
-        const r = _rkPhrase(p, sz);
-        svg += _g(0, y, r.svg);
-        y += r.h + 8; if (r.w > w) w = r.w;
+            if (msz + 11 > h) h = msz + 11;
+        } else if (m && typeof m === 'object') {           // 구 수식어(전치사구/분사/to/절): ㄴ받침 — 같은 줄
+            const r = _rkPhrase(m, sz);
+            svg += _g(x, 2, r.svg);
+            if (i === 0) legX = x + 1;
+            if (r.h + 2 > h) h = r.h + 2;
+            x += r.w + 14;
+        }
     });
-    // legX = 부모 연결선이 만나야 할 x. 단어수식어는 행 중앙, 구수식어(전치사구 등)는 자체 다리(x=1)에 맞춤
-    const legX = words.length ? wordW / 2 : 1;
-    return { svg, w, h: y, wordW, legX };
+    return { svg, w: x, h, wordW: x, legX };
 }
 
 // 구 수식어 1개 (전치사구/분사구문/to부정사/종속절) — local (0,0) → {svg,w,h}
