@@ -876,15 +876,17 @@ function _rkPhrase(p, sz) {
         }
         return { svg, w, h };
     }
-    // prep / part / 목적어없는 inf : ㄴ(L자) 받침 — 라벨(다리 위) / 목적어(받침선 위, 등위접속 가능)
+    // prep / part / 목적어없는 inf : ㄴ(L자) 받침 — 전치사(다리 위 왼쪽) / 목적어(받침선 위, 전치사 오른쪽으로 흘림 = 교재 방식)
     const label = p.prep || p.part || p.inf || '';
     const objNode = (p.obj != null) ? p.obj : (p.inf ? p.verb : '');
+    const labX = 8;
     const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
-    const prepY = msz - 1, baseY = msz + 18, lineY = baseY - 4, objX = 13;
-    let svg = _line(1, -4, 1, baseY, 1.8, K) + _txt(8, prepY, label, msz, _RK.mod);
+    const prepY = msz - 1, baseY = msz + 18, lineY = baseY - 4;
+    const objX = labX + labW + 14;                            // 목적어를 전치사 오른쪽으로(우측 드리프트)
+    let svg = _line(1, -4, 1, baseY, 1.8, K) + _txt(labX, prepY, label, msz, _RK.mod);
     const ob = _rkObjInline(objNode, sz), dy = lineY - ob.headH;
     svg += _g(objX, dy, ob.svg);                               // 목적어(머리는 받침선 위, 머리 수식어는 아래)
-    const baseRight = Math.max(8 + labW, objX + ob.w) + 6;
+    const baseRight = Math.max(labX + labW, objX + ob.w) + 6;
     svg += _line(1, baseY, baseRight, baseY, 1.8, K);          // 가로 받침선
     return { svg, w: baseRight, h: Math.max(baseY + 4, dy + ob.h) };
 }
