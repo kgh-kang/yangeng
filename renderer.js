@@ -844,12 +844,14 @@ function _rkPhrase(p, sz) {
         if (wn.mods && wn.mods.length) { const m = _rkMods(wn.mods, sz - 1); svg += _g(11, h, m.svg); h += m.h; w = Math.max(w, 11 + m.w); }
         return { svg, w, h };
     }
-    if (p.clause) {                            // 종속절: 라벨 + 미니 절(재귀)
-        const lab = ((p.clause.relation || p.relation || p.rel || '') + ' ' + (p.clause.type || '')).trim() || '종속절';
-        let svg = _txt(2, msz, '[' + lab + ']', Math.max(10, msz - 1), _RK.restored, true);
-        const sub = _rkClause(p.clause, { size: Math.max(13, sz - 4), color: _RK.sub });
-        svg += _g(6, msz + 3, sub.svg);
-        return { svg, w: Math.max(sub.w + 6, 60), h: msz + 3 + sub.h };
+    if (p.clause) {                            // 종속절: 미니 절(재귀). 교재 방식 = 대괄호 라벨 없음.
+        // 연결어(because/when/that 등)가 있으면 작게 표시(관계대명사 주어는 절 안에 이미 나오므로 생략)
+        const conn = p.connector || p.clause.connector || '';
+        let svg = '', top = 0;
+        if (conn) { svg += _txt(2, msz, conn, Math.max(11, msz - 1), _RK.sub); top = msz + 2; }
+        const sub = _rkClause(p.clause, { size: Math.max(13, sz - 3), color: _RK.sub });
+        svg += _g(4, top, sub.svg);
+        return { svg, w: Math.max(sub.w + 4, 40), h: top + sub.h };
     }
     // to부정사(동사 보유): ㄴ 받침에 미니 V│O — "to"(다리 위) / "fix │ 목적어"(받침선 위)
     if (p.inf && p.verb) {

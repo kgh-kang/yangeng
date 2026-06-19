@@ -1,5 +1,17 @@
 # 양 번역기 — 작업 로그 (WORKLOG)
 
+## 2026-06-20 — 14주차 GPS 지문 전수 점검 (세션 16 이어서)
+
+- **교재 PDF(공학영어14, 25p) 전체 대조**: 기본 1~5형식 워크드 예제 9개 + GPS 지문 ①~⑬.
+- **일치 확인(렌더=교재)**: 기본 9개(came/is·made 보어/have so→special/study/bought/make) + GPS ①wander ②scouts ④pinpoint ⑤Civilians ⑦concept ⑧broadcasts ⑨receiver ⑩Relying.
+- **수정**:
+  - **보어/OC 사선 방향** ╱→╲(좌상→우하) 교재 일치(2·5형식 공통).
+  - **수식어 가로 나란히**: 단어+구 수식어를 입력순 가로 배치(readings의 \simultaneous 옆 from 등).
+  - **종속절 대괄호 라벨 제거**: `[형용사절 N형식]` → 미니 절만(교재 방식). 연결어 있을 때만 작게 표기.
+- **미지원 구조 2개 확인(향후 확장 과제)**:
+  - 복합술어(⑥ steer/track/help — 1주어 다동사 병렬): 절 단위 등위 필요.
+  - 보어=분사절(⑫ 진행형 is testing X, ③ 수동분사 called X receivers): C/OC가 목적어를 거느리는 구조.
+
 ## 2026-06-19 — 스크린샷→JSON 워크플로 + 전치사구 ㄴ 받침 표기 (세션 16)
 
 - **워크플로 확정**: 사용자가 교재 답안지 **스크린샷**을 주면 Claude가 읽어 트리 JSON으로 변환,
