@@ -609,6 +609,77 @@ function goHome() {
     window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
+// ================================================================
+//  Claude 분석 JSON → 구조도 시각화 (분석은 Claude, 그림은 웹)
+// ================================================================
+function _np(x) {                       // 명사구 {head,mods} 정규화
+    if (!x) return { head: '', mods: [] };
+    if (typeof x === 'string') return { head: x, mods: [] };
+    return { head: x.head || '', mods: Array.isArray(x.mods) ? x.mods : [] };
+}
+function _normalizeR(o) {               // Claude JSON → 렌더러가 먹는 R 객체
+    if (!o || typeof o !== 'object') return null;
+    const R = {
+        orig: o.orig || '',
+        type: o.type || '', typeKo: o.typeKo || '', verbStyle: o.verbStyle || '',
+        sentType: o.sentType || '평서문', verbSub: o.verbSub || '',
+        sub: _np(o.sub), verb: o.verb || '', comp: _np(o.comp), obj: _np(o.obj),
+        io: _np(o.io), oc: _np(o.oc),
+        modV: Array.isArray(o.modV) ? o.modV : [],
+        passive: !!o.passive, restoredInf: o.restoredInf || null,
+        withAbs: o.withAbs || null,
+        warnings: Array.isArray(o.warnings) ? o.warnings : [],
+        clauses: []
+    };
+    if (Array.isArray(o.clauses)) {
+        R.clauses = o.clauses.map(c => ({
+            relation: c.relation || '종속절', connector: c.connector || '',
+            antecedent: c.antecedent || null, orig: c.orig || '', result: _normalizeR(c.result)
+        })).filter(c => c.result);
+    }
+    // 한국어 동사유형/어미 자동 보정
+    if (R.type && !R.typeKo) {
+        const M = { '1형식': ['자존형', "'있다'"], '2형식': ['의존형', "'이(되)다'"], '3형식': ['소유형', "'하다'"], '4형식': ['수여형', "'주다'"], '5형식': ['복합형', "'이다'고+'하다'"] };
+        if (M[R.type]) { R.typeKo = M[R.type][0]; R.verbStyle = R.verbStyle || M[R.type][1]; }
+    }
+    return R;
+}
+function _jsonError(msg) {
+    document.body.classList.add('searched');
+    const sp = document.getElementById('spell-area'); if (sp) sp.innerHTML = '';
+    document.getElementById('result').innerHTML =
+        `<div class="result-notice">${msg}</div>`;
+}
+function drawJSON() {
+    const ta = document.getElementById('json-area');
+    if (!ta) return;
+    let raw = ta.value.trim();
+    if (!raw) { ta.focus(); return; }
+    raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();   // 코드펜스 제거
+    let obj;
+    try { obj = JSON.parse(raw); }
+    catch (e) {
+        _jsonError('JSON을 읽을 수 없어요. Claude가 출력한 <strong>분석 JSON</strong>(또는 <code>```json</code> 블록)을 그대로 붙여넣어 주세요.<br><small>' + esc(e.message) + '</small>');
+        return;
+    }
+    const R = _normalizeR(Array.isArray(obj) ? obj[0] : obj);
+    if (!R || !R.type || !R.verb) {
+        _jsonError('JSON 형식이 올바르지 않아요. 최소한 <code>type</code>, <code>verb</code>, <code>sub</code> 가 필요합니다.');
+        return;
+    }
+    document.body.classList.add('searched');
+    const sp = document.getElementById('spell-area'); if (sp) sp.innerHTML = '';
+    render(R);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+}
+// 모드 전환 (문장 분석 / JSON 시각화)
+function setMode(mode) {
+    document.body.setAttribute('data-mode', mode === 'json' ? 'json' : 'text');
+    document.querySelectorAll('.mode-tab').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    const f = mode === 'json' ? document.getElementById('json-area') : document.getElementById('inp');
+    if (f) f.focus();
+}
+
 // 복수 문장 렌더링 — 가로 한 줄 배치
 function renderMulti(results, conjunctions) {
     const c = document.getElementById('result');

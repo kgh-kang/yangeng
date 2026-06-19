@@ -284,6 +284,33 @@ body.searched .history-header { display: none; }
     box-shadow: none;
 }
 
+/* ===== 모드 탭 + JSON 시각화 입력 ===== */
+.mode-tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; }
+.mode-tab {
+    font-size: 13px; font-weight: 500; font-family: inherit;
+    padding: 7px 16px; border-radius: 100px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text-2);
+    cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+}
+.mode-tab:hover { border-color: var(--hairline-strong); }
+.mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.json-input { display: none; flex-direction: column; gap: 12px; width: 100%; max-width: 720px; margin: 0 auto; }
+body[data-mode="json"] .json-input { display: flex; }
+body[data-mode="json"] #text-input { display: none; }
+body[data-mode="json"] .home-extra { display: none; }
+body.searched .mode-tabs, body.searched .json-input { display: none; }
+
+#json-area {
+    width: 100%; min-height: 150px; resize: vertical;
+    padding: 14px 18px; border: 1px solid var(--card-border); border-radius: 16px;
+    background: var(--bg-surface); color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.55;
+    box-shadow: var(--shadow-md);
+}
+#json-area:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(86,69,212,0.12); }
+.btn-draw { align-self: center; border-radius: 24px; }
+
 /* ===== 홈 안내 + 예시 칩 (검색 후 숨김) ===== */
 .home-extra { margin-top: 18px; text-align: center; }
 body.searched .home-extra { display: none; }
