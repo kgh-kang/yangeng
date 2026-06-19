@@ -916,7 +916,7 @@ function _rkClause(node, opt) {
     cells.forEach((c, i) => {                                 // 구분선
         if (i === 0) return;
         const bx = c.x, prev = cells[i - 1];
-        if (c.role === 'C' || c.role === 'OC') svg += _line(bx, baseY, bx + sz * 0.9, baseY - sz, 2.2, mc);  // 보어 사선
+        if (c.role === 'C' || c.role === 'OC') svg += _line(bx, baseY - sz, bx + sz * 0.9, baseY, 2.2, mc);  // 보어 사선(╲ 좌상→우하, 교재 방향)
         else if (prev.role === 'S') svg += _line(bx, baseY - sz - 2, bx, baseY + sz * 0.6, 2.2, mc);          // S│V 관통
         else svg += _line(bx, baseY - sz - 2, bx, baseY, 2.2, mc);                                            // 반선
     });
