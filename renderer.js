@@ -774,6 +774,39 @@ function _g(dx, dy, inner) { return `<g transform="translate(${(+dx).toFixed(1)}
 function _wn(x) { return (x && typeof x === 'object') ? { w: x.w || x.head || '', mods: x.mods || [] } : { w: x || '', mods: [] }; }
 function _mfont(sz) { return '600 ' + sz + 'px ' + _FONT_STACK; }
 
+// 등위접속(and/or) 여부
+function _isCoord(x) { return x && typeof x === 'object' && (Array.isArray(x.and) || Array.isArray(x.or)); }
+// 목적어 인라인: 단일 워드노드 또는 등위접속(and/or). 머리 baseline=hsz, 머리 수식어는 아래로.
+//   → {svg, w, h, headH, legX}  (legX = 첫 머리 중앙; 받침선 연결용)
+function _rkObjInline(objNode, sz) {
+    const hsz = Math.max(11, sz - 5);
+    const f = '400 ' + hsz + 'px ' + _FONT_STACK;
+    if (_isCoord(objNode)) {                                  // X and/or Y …
+        const conj = Array.isArray(objNode.and) ? 'and' : 'or';
+        const items = objNode.and || objNode.or;
+        let x = 0, svg = '', belowH = 0, firstLeg = 0, maxR = 0;
+        items.forEach((it, i) => {
+            if (i > 0) {                                       // 접속사: 점선 + 라벨(회색)
+                const cw = _measure(conj, f);
+                svg += `<line x1="${x.toFixed(1)}" y1="${(hsz - 4).toFixed(1)}" x2="${(x + cw + 10).toFixed(1)}" y2="${(hsz - 4).toFixed(1)}" stroke="${_RK.sub}" stroke-width="1.3" stroke-dasharray="2 2"/>`;
+                svg += _txt(x + 5, hsz, conj, hsz, _RK.restored);
+                x += cw + 14;
+            }
+            const wn = _wn(it), ww = _measure(wn.w, f);
+            svg += _txt(x, hsz, wn.w, hsz, /^\(/.test(wn.w) ? _RK.restored : _RK.mod);
+            if (i === 0) firstLeg = x + ww / 2;
+            if (maxR < x + ww) maxR = x + ww;
+            if (wn.mods && wn.mods.length) { const m = _rkMods(wn.mods, sz - 1); svg += _g(x, hsz + 4, m.svg); if (m.h > belowH) belowH = m.h; if (maxR < x + m.w) maxR = x + m.w; }
+            x += ww + 14;
+        });
+        return { svg, w: maxR, h: hsz + 4 + belowH, headH: hsz, legX: firstLeg };
+    }
+    const wn = _wn(objNode), ww = _measure(wn.w, f);
+    let svg = _txt(0, hsz, wn.w, hsz, /^\(/.test(wn.w) ? _RK.restored : _RK.mod), belowH = 0, w = ww;
+    if (wn.mods && wn.mods.length) { const m = _rkMods(wn.mods, sz - 1); svg += _g(0, hsz + 4, m.svg); belowH = m.h; if (m.w > w) w = m.w; }
+    return { svg, w, h: hsz + 4 + belowH, headH: hsz, legX: ww / 2 };
+}
+
 // 수식어 묶음(워드 가로 + 구 세로) — local (0,0) 기준 → {svg,w,h,wordW}
 //   wordW = 단어 수식어 행 폭(셀 폭 산정용; 구 수식어는 아래로 흘려 셀을 늘리지 않음)
 function _rkMods(mods, sz) {
@@ -820,29 +853,40 @@ function _rkPhrase(p, sz) {
         svg += _g(6, msz + 3, sub.svg);
         return { svg, w: Math.max(sub.w + 6, 60), h: msz + 3 + sub.h };
     }
-    // prep / part / inf : ㄴ(L자) 받침 — 전치사는 세로 다리 옆(위), 목적어는 가로 받침선 위(아래). 둘 다 같은 ㄴ 안.
-    const label = p.prep || p.part || (p.inf ? p.inf : '');
-    const obj = _wn(p.obj || (p.inf ? { w: p.verb, mods: p.mods } : ''));
-    const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
-    const objW = _measure(obj.w, '400 ' + msz + 'px ' + _FONT_STACK);
-    const labX = 8;                                           // 전치사: 세로 다리 오른쪽(위쪽)
-    const objX = 13;                                          // 목적어: 받침선 위, 다리에서 약간 들여씀
-    const prepY = msz - 1;                                    // 전치사 baseline(상단)
-    const baseY = msz + 18;                                   // 가로 받침선 y(전치사 아래, 간격 확보)
-    const objY = baseY - 4;                                   // 목적어 baseline(받침선 위)
-    const baseRight = Math.max(labX + labW, objX + objW) + 6;
-    let svg = '';
-    svg += _line(1, -4, 1, baseY, 1.8, K);                     // ㄴ 세로 다리(부모 본선 → 받침)
-    svg += _line(1, baseY, baseRight, baseY, 1.8, K);          // ㄴ 가로 받침선
-    svg += _txt(labX, prepY, label, msz, _RK.mod);           // 전치사/분사/to (다리 옆 위)
-    svg += _txt(objX, objY, obj.w, msz, _RK.mod);            // 목적어 (받침선 위)
-    let h = baseY + 4, w = baseRight;
-    if (obj.mods && obj.mods.length) {                         // 목적어의 수식어(관계절 포함) → 받침선 아래
-        const om = _rkMods(obj.mods, sz - 1);
-        svg += _g(objX, baseY + 3, om.svg);
-        h = baseY + 3 + om.h; w = Math.max(w, objX + om.w);
+    // to부정사(동사 보유): ㄴ 받침에 미니 V│O — "to"(다리 위) / "fix │ 목적어"(받침선 위)
+    if (p.inf && p.verb) {
+        const verbW = _measure(p.verb, '400 ' + msz + 'px ' + _FONT_STACK);
+        const objNode = (p.obj != null && p.obj !== '') ? p.obj : (p.objs ? { and: p.objs } : null);
+        const prepY = msz - 1, baseY = msz + 18, lineY = baseY - 4, verbX = 13;
+        let svg = _line(1, -4, 1, baseY, 1.8, K) + _txt(8, prepY, p.inf, msz, _RK.mod) + _txt(verbX, lineY, p.verb, msz, _RK.mod);
+        let baseRight = verbX + verbW + 8, h = baseY + 4, w;
+        if (objNode != null) {                                 // fix │ 목적어
+            const sepX = baseRight;
+            svg += _line(sepX, baseY - msz, sepX, baseY, 1.5, K);   // 동사│목적어 반선
+            const ob = _rkObjInline(objNode, sz), ox = sepX + 8, dy = lineY - ob.headH;
+            svg += _g(ox, dy, ob.svg);
+            baseRight = ox + ob.w + 4; h = Math.max(h, dy + ob.h);
+        }
+        svg += _line(1, baseY, baseRight, baseY, 1.8, K);      // 가로 받침선
+        w = baseRight + 4;
+        if (p.mods && p.mods.length) {                         // 부정사 동사의 (부사적) 수식어 → 받침선 아래
+            const vm = _rkMods(p.mods, sz - 1);
+            svg += _g(verbX, baseY + 3, vm.svg);
+            h = Math.max(h, baseY + 3 + vm.h); w = Math.max(w, verbX + vm.w);
+        }
+        return { svg, w, h };
     }
-    return { svg, w, h };
+    // prep / part / 목적어없는 inf : ㄴ(L자) 받침 — 라벨(다리 위) / 목적어(받침선 위, 등위접속 가능)
+    const label = p.prep || p.part || p.inf || '';
+    const objNode = (p.obj != null) ? p.obj : (p.inf ? p.verb : '');
+    const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
+    const prepY = msz - 1, baseY = msz + 18, lineY = baseY - 4, objX = 13;
+    let svg = _line(1, -4, 1, baseY, 1.8, K) + _txt(8, prepY, label, msz, _RK.mod);
+    const ob = _rkObjInline(objNode, sz), dy = lineY - ob.headH;
+    svg += _g(objX, dy, ob.svg);                               // 목적어(머리는 받침선 위, 머리 수식어는 아래)
+    const baseRight = Math.max(8 + labW, objX + ob.w) + 6;
+    svg += _line(1, baseY, baseRight, baseY, 1.8, K);          // 가로 받침선
+    return { svg, w: baseRight, h: Math.max(baseY + 4, dy + ob.h) };
 }
 
 // 절 1개 — local (0,0) → {svg,w,h}
