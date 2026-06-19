@@ -685,29 +685,47 @@ function renderTreeCard(node) {
     document.body.classList.add('searched');
     const sp = document.getElementById('spell-area'); if (sp) sp.innerHTML = '';
     const c = document.getElementById('result');
-    const type = node.type || '';
-    const KO = { '1형식': '자존형', '2형식': '의존형', '3형식': '소유형', '4형식': '수여형', '5형식': '복합형' };
-    let svg;
-    try { svg = buildTreeSVG(node); }
+    let html;
+    try { html = _jsonCardHTML(node, { tag: node.sentType || '평서문' }); }
     catch (e) { _jsonError('구조도 생성 실패: ' + esc(e.message)); return; }
-    c.innerHTML = `
-        <div class="result-card">
-            <div class="r-badge-area">
-                <div class="r-badge badge-${(type[0] || '')}">${esc(type)} ${esc(KO[type] || '')}</div>
-                <span class="r-sent-type">${esc(node.sentType || '평서문')}</span>
-            </div>
-            ${node.orig ? `<div class="r-original">${esc(node.orig)}</div>` : ''}
-            <div class="r-diagram-wrap"><div class="r-diagram">${svg}</div></div>
-            <div class="diagram-legend">
-                <span><i style="background:${_RK.S}"></i>주어</span>
-                <span><i style="background:${_RK.V}"></i>동사</span>
-                <span><i style="background:${_RK.O}"></i>목적어</span>
-                <span><i style="background:${_RK.OC}"></i>보어</span>
-                <span><i style="background:${_RK.sub}"></i>수식어·종속절</span>
-            </div>
-        </div>`;
+    c.innerHTML = html || '';
     c.setAttribute('tabindex', '-1');
     c.focus({ preventScroll: true });
+}
+// JSON(트리/평면) → 구조도 카드 HTML (미리보기·결과 공용)
+function _jsonCardHTML(root, opts) {
+    opts = opts || {};
+    const KO = { '1형식': '자존형', '2형식': '의존형', '3형식': '소유형', '4형식': '수여형', '5형식': '복합형' };
+    let svg, type, orig;
+    if (root && (root.S || root.s) && (root.V || root.v)) {        // 트리
+        svg = buildTreeSVG(root); type = root.type || ''; orig = root.orig || '';
+    } else {                                                         // 평면
+        const R = _normalizeR(root); if (!R || !R.type) return null;
+        svg = buildDiagramSVG(R); type = R.type; orig = R.orig || '';
+    }
+    return `<div class="result-card">
+        <div class="r-badge-area"><div class="r-badge badge-${(type[0] || '')}">${esc(type)} ${esc(KO[type] || '')}</div>${opts.tag ? `<span class="r-sent-type">${opts.tag}</span>` : ''}</div>
+        ${orig ? `<div class="r-original">${esc(orig)}</div>` : ''}
+        <div class="r-diagram-wrap"><div class="r-diagram">${svg}</div></div>
+        <div class="diagram-legend"><span><i style="background:${_RK.S}"></i>주어</span><span><i style="background:${_RK.V}"></i>동사</span><span><i style="background:${_RK.O}"></i>목적어</span><span><i style="background:${_RK.OC}"></i>보어</span><span><i style="background:${_RK.sub}"></i>수식어·종속절</span></div>
+    </div>`;
+}
+// 실시간 미리보기 (타이핑 중) — 검색상태 전환 없이 입력 아래에 그림
+let _liveT = null;
+function livePreview() {
+    clearTimeout(_liveT);
+    _liveT = setTimeout(() => {
+        const ta = document.getElementById('json-area'), pv = document.getElementById('json-preview');
+        if (!ta || !pv) return;
+        let raw = ta.value.trim();
+        if (!raw) { pv.innerHTML = ''; return; }
+        raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+        let obj; try { obj = JSON.parse(raw); } catch (e) { pv.innerHTML = '<div class="live-hint">JSON 입력 중…</div>'; return; }
+        try {
+            const html = _jsonCardHTML(Array.isArray(obj) ? obj[0] : obj, { tag: '미리보기' });
+            pv.innerHTML = html || '<div class="live-hint">type·S·V 가 필요합니다</div>';
+        } catch (e) { pv.innerHTML = '<div class="live-hint">' + esc(e.message) + '</div>'; }
+    }, 350);
 }
 // 모드 전환 (문장 분석 / JSON 시각화)
 function setMode(mode) {

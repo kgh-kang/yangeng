@@ -310,6 +310,10 @@ body.searched .mode-tabs, body.searched .json-input { display: none; }
 }
 #json-area:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(86,69,212,0.12); }
 .btn-draw { align-self: center; border-radius: 24px; }
+.json-preview { width: 100%; }
+.json-preview .result-card { animation: none; }
+.json-preview:empty { display: none; }
+.live-hint { text-align: center; color: var(--text-3); font-size: 13px; padding: 16px; }
 
 /* ===== 홈 안내 + 예시 칩 (검색 후 숨김) ===== */
 .home-extra { margin-top: 18px; text-align: center; }

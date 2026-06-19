@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8">
+<title>골든 JSON 답안지 갤러리</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<style>body{padding:24px}.gx{max-width:1200px;margin:0 auto}.gx h2{font-size:15px;color:#5d5b54;margin:24px 0 6px}</style>
+</head><body data-mode="json">
+<div class="gx"><h1 style="font-size:20px;margin-bottom:8px">골든 JSON 답안지 (교재 예문)</h1>
+<div id="out"></div></div>
+<script src="https://unpkg.com/compromise@14.14.4/builds/compromise.js"></script>
+<script src="../parser.js"></script>
+<script src="../renderer.js"></script>
+<script>
+// 교재 예문의 정답 트리 JSON (답안지 + 렌더러 튜닝 기준)
+const GOLDEN = [
+  { label: "① 1형식 — wander (전치사구 2개)",
+    json: { orig:"No well-prepared boy scout troop would wander into the wilderness without a compass.",
+      type:"1형식",
+      S:{w:"troop",mods:["No","well-prepared","boy","scout"]},
+      V:{w:"would wander",mods:[
+        {prep:"into",obj:{w:"wilderness",mods:["the"]}},
+        {prep:"without",obj:{w:"compass",mods:["a"]}} ]} } },
+
+  { label: "④ 2형식 — concept is simple (of 전치사구)",
+    json: { orig:"The concept of the Global Positioning System is simple.",
+      type:"2형식",
+      S:{w:"concept",mods:["The",{prep:"of",obj:{w:"System",mods:["the","Global","Positioning"]}}]},
+      V:"is", C:"simple" } },
+
+  { label: "4형식 — He gave her comic books",
+    json: { orig:"He gave her comic books.",
+      type:"4형식", S:"He", V:"gave", IO:"her", O:{w:"books",mods:["comic"]} } },
+
+  { label: "5형식 — He made her happy",
+    json: { orig:"He made her happy.",
+      type:"5형식", S:"He", V:"made", O:"her", OC:"happy" } },
+
+  { label: "② 3형식 — GPS 복문 (분사구문 + 관계절 5형식 + to부정사)",
+    json: { orig:"But scouts may soon have a more sophisticated way to keep from getting lost, using a technology that the Army made famous during Operation Desert Storm.",
+      type:"3형식",
+      S:{w:"scouts",mods:["But"]},
+      V:{w:"may have",mods:[
+        "soon",
+        {part:"using",obj:{w:"technology",mods:[
+          "a",
+          {relation:"형용사절",clause:{type:"5형식",
+            S:{w:"Army",mods:["the"]},
+            V:{w:"made",mods:[{prep:"during",obj:"Operation Desert Storm"}]},
+            O:"(that)", OC:"famous"}} ]}} ]},
+      O:{w:"way",mods:[
+        "a","more","sophisticated",
+        {inf:"to",verb:"keep",mods:[{prep:"from",obj:{w:"getting",mods:["lost"]}}]} ]} } }
+];
+const KO={'1형식':'자존형','2형식':'의존형','3형식':'소유형','4형식':'수여형','5형식':'복합형'};
+let html='';
+GOLDEN.forEach(g=>{
+  let svg='';
+  try{ svg=buildTreeSVG(g.json); }catch(e){ svg='<div style="color:red">ERR '+e.message+'</div>'; }
+  html+='<h2>'+g.label+'</h2>'+
+    '<div class="result-card"><div class="r-badge-area"><div class="r-badge badge-'+g.json.type[0]+'">'+g.json.type+' '+(KO[g.json.type]||'')+'</div></div>'+
+    '<div class="r-original">'+(g.json.orig||'')+'</div>'+
+    '<div class="r-diagram-wrap"><div class="r-diagram">'+svg+'</div></div></div>';
+});
+document.getElementById('out').innerHTML=html;
+</script></body></html>
