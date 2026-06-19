@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>구조도 빌더 — 답안지 직접 작성</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .bwrap{max-width:1100px;margin:0 auto;padding:24px 20px 80px}
+  .btitle{font-size:20px;font-weight:700;letter-spacing:-.4px;margin-bottom:4px}
+  .bsub{color:var(--text-3);font-size:13px;margin-bottom:20px}
+  .bgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  @media(max-width:820px){.bgrid{grid-template-columns:1fr}}
+  .panel{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:16px;box-shadow:var(--shadow-sm)}
+  .panel h3{font-size:13px;color:var(--text-2);margin-bottom:12px;font-weight:600}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}
+  .lab{font-size:12px;color:var(--text-2);min-width:auto;font-weight:600}
+  input.f,select.f{font-family:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-surface);color:var(--text)}
+  input.f:focus,select.f:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(86,69,212,.12)}
+  .comp{border:1px solid var(--border-light);border-radius:10px;padding:10px;margin:8px 0;background:var(--bg-surface)}
+  .comp>.row:first-child .lab{color:var(--primary)}
+  .mods{margin:6px 0 0 16px;border-left:2px solid var(--border);padding-left:10px}
+  .mod{margin:6px 0;padding:8px;border:1px solid var(--border-light);border-radius:8px;background:var(--card)}
+  .btn{font-family:inherit;font-size:12px;padding:5px 11px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--text-2);cursor:pointer}
+  .btn:hover{border-color:var(--hairline-strong);color:var(--text)}
+  .btn.add{color:var(--primary);border-color:rgba(86,69,212,.3)}
+  .btn.del{color:#c0504d;border:none;background:none;padding:2px 6px}
+  .btn.pri{background:var(--primary);color:#fff;border-color:var(--primary);font-size:13px;padding:8px 16px;border-radius:20px}
+  .addbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .kindtag{font-size:11px;font-weight:700;color:var(--text-3);margin-right:4px}
+  #jsonout{width:100%;min-height:120px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.5;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--bg-surface);color:var(--text);resize:vertical;margin-top:8px}
+  .toplinks{font-size:13px;margin-bottom:14px}
+  .toplinks a{color:var(--primary);text-decoration:none}
+</style>
+</head>
+<body data-mode="json">
+<div class="bwrap">
+  <div class="toplinks"><a href="index.html">← 분석기로</a></div>
+  <h1 class="btitle">구조도 빌더 <span style="font-size:13px;color:var(--text-3);font-weight:400">— 답안지를 직접 짜서 정확히 그리기</span></h1>
+  <p class="bsub">형식을 고르고 주어/동사/목적어·보어와 수식어·종속절을 버튼으로 추가하세요. 오른쪽에 즉시 구조도가 그려지고, JSON도 복사할 수 있습니다.</p>
+  <div class="bgrid">
+    <div class="panel" id="form-panel"><h3>구조 입력</h3><div id="form"></div></div>
+    <div>
+      <div class="panel"><h3>미리보기</h3><div id="preview" class="result-area" style="min-height:120px"></div></div>
+      <div class="panel" style="margin-top:16px"><h3>JSON (웹 시각화/저장용)</h3><textarea id="jsonout" readonly></textarea><div style="margin-top:8px"><button class="btn pri" onclick="copyJSON()">JSON 복사</button></div></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/compromise@14.14.4/builds/compromise.js"></script>
+<script src="parser.js"></script>
+<script src="renderer.js"></script>
+<script>
+// ===== 빌더 상태 (트리) =====
+// 컴포넌트(S/V/O/IO/C/OC) = 워드노드 {w, mods:[]}
+// mod = {kind:'word',w} | {kind:'prep',prep,obj} | {kind:'part',part,obj} | {kind:'inf',verb,mods:[]} | {kind:'clause',relation,clause}
+let T = { type:'3형식', orig:'', S:{w:'',mods:[]}, V:{w:'',mods:[]}, O:{w:'',mods:[]}, IO:{w:'',mods:[]}, C:{w:'',mods:[]}, OC:{w:'',mods:[]} };
+
+const COMPS = { '1형식':['S','V'], '2형식':['S','V','C'], '3형식':['S','V','O'], '4형식':['S','V','IO','O'], '5형식':['S','V','O','OC'] };
+const LABEL = { S:'주어(S)', V:'동사(V)', O:'목적어(O)', IO:'간접목적어(IO)', C:'주어보어(C)', OC:'목적어보어(OC)' };
+
+function esc2(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getP(path){ let o=T; for(const k of path.split('.')) o = Array.isArray(o)?o[+k]:o[k]; return o; }
+function setP(path,val){ const ks=path.split('.'); let o=T; for(let i=0;i<ks.length-1;i++){o=Array.isArray(o)?o[+ks[i]]:o[ks[i]];} const last=ks[ks.length-1]; if(Array.isArray(o))o[+last]=val; else o[last]=val; }
+
+// ===== 폼 렌더 =====
+function modsEditor(modsPath, mods){
+  let h = `<div class="mods">`;
+  (mods||[]).forEach((m,i)=>{
+    const p = modsPath+'.'+i;
+    h += `<div class="mod">`;
+    if(m.kind==='word'){
+      h += `<span class="kindtag">단어</span><input class="f" style="width:140px" value="${esc2(m.w)}" oninput="setP('${p}.w',this.value);sync()"> <button class="btn del" onclick="rm('${modsPath}',${i})">✕</button>`;
+      h += modsEditor(p+'.mods', m.mods);
+    } else if(m.kind==='prep'||m.kind==='part'){
+      const lk = m.kind==='prep'?'전치사':'분사';
+      h += `<span class="kindtag">${lk}구</span><input class="f" style="width:90px" placeholder="${lk}" value="${esc2(m.kind==='prep'?m.prep:m.part)}" oninput="setP('${p}.${m.kind}',this.value);sync()"> + 목적어 <input class="f" style="width:120px" value="${esc2(m.obj.w)}" oninput="setP('${p}.obj.w',this.value);sync()"> <button class="btn del" onclick="rm('${modsPath}',${i})">✕</button>`;
+      h += modsEditor(p+'.obj.mods', m.obj.mods);
+    } else if(m.kind==='inf'){
+      h += `<span class="kindtag">to부정사</span> to <input class="f" style="width:120px" placeholder="동사" value="${esc2(m.verb)}" oninput="setP('${p}.verb',this.value);sync()"> <button class="btn del" onclick="rm('${modsPath}',${i})">✕</button>`;
+      h += modsEditor(p+'.mods', m.mods);
+    } else if(m.kind==='clause'){
+      h += `<span class="kindtag">종속절</span> <select class="f" onchange="setP('${p}.relation',this.value);sync()">${['형용사절','명사절','부사절'].map(r=>`<option ${m.relation===r?'selected':''}>${r}</option>`).join('')}</select> <button class="btn del" onclick="rm('${modsPath}',${i})">✕</button>`;
+      h += clauseEditor(p+'.clause', m.clause);
+    }
+    h += `</div>`;
+  });
+  h += `<div class="addbar">
+    <button class="btn add" onclick="addMod('${modsPath}','word')">+단어</button>
+    <button class="btn add" onclick="addMod('${modsPath}','prep')">+전치사구</button>
+    <button class="btn add" onclick="addMod('${modsPath}','part')">+분사구문</button>
+    <button class="btn add" onclick="addMod('${modsPath}','inf')">+to부정사</button>
+    <button class="btn add" onclick="addMod('${modsPath}','clause')">+종속절</button>
+  </div></div>`;
+  return h;
+}
+
+function compEditor(path, role, node){
+  return `<div class="comp"><div class="row"><span class="lab">${LABEL[role]}</span>
+    <input class="f" style="width:160px" value="${esc2(node.w)}" oninput="setP('${path}.w',this.value);sync()"></div>
+    ${modsEditor(path+'.mods', node.mods)}</div>`;
+}
+
+function clauseEditor(path, c){
+  const comps = COMPS[c.type]||['S','V'];
+  let h = `<div class="comp" style="background:#faf9f8"><div class="row">
+    <span class="lab">형식</span>
+    <select class="f" onchange="changeType('${path}',this.value)">${Object.keys(COMPS).map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}</select></div>`;
+  comps.forEach(role=>{ if(!c[role]) c[role]={w:'',mods:[]}; h += compEditor(path+'.'+role, role, c[role]); });
+  h += `</div>`;
+  return h;
+}
+
+function renderForm(){
+  let h = `<div class="row"><span class="lab">형식</span>
+    <select class="f" onchange="changeType('',this.value)">${Object.keys(COMPS).map(t=>`<option ${T.type===t?'selected':''}>${t}</option>`).join('')}</select>
+    <span class="lab" style="margin-left:10px">원문</span>
+    <input class="f" style="flex:1;min-width:200px" value="${esc2(T.orig)}" oninput="setP('orig',this.value);sync()" placeholder="영어 문장(선택)"></div>`;
+  (COMPS[T.type]||['S','V']).forEach(role=>{ if(!T[role]) T[role]={w:'',mods:[]}; h += compEditor(role, role, T[role]); });
+  document.getElementById('form').innerHTML = h;
+}
+
+// ===== 구조 변경 =====
+function newMod(kind){
+  if(kind==='word') return {kind:'word',w:'',mods:[]};
+  if(kind==='prep') return {kind:'prep',prep:'',obj:{w:'',mods:[]}};
+  if(kind==='part') return {kind:'part',part:'',obj:{w:'',mods:[]}};
+  if(kind==='inf') return {kind:'inf',verb:'',mods:[]};
+  if(kind==='clause') return {kind:'clause',relation:'형용사절',clause:{type:'5형식',S:{w:'',mods:[]},V:{w:'',mods:[]},O:{w:'(that)',mods:[]},OC:{w:'',mods:[]}}};
+}
+function addMod(path, kind){ const arr=getP(path); arr.push(newMod(kind)); renderForm(); sync(); }
+function rm(path, i){ const arr=getP(path); arr.splice(i,1); renderForm(); sync(); }
+function changeType(path, t){ const c = path? getP(path) : T; c.type=t; (COMPS[t]||[]).forEach(r=>{if(!c[r])c[r]={w:'',mods:[]};}); renderForm(); sync(); }
+
+// ===== 상태 → 렌더러 트리 JSON =====
+function modToTree(m){
+  if(m.kind==='word'){ return (m.mods&&m.mods.length)? {w:m.w, mods:m.mods.map(modToTree)} : m.w; }
+  if(m.kind==='prep'){ return {prep:m.prep, obj:wnToTree(m.obj)}; }
+  if(m.kind==='part'){ return {part:m.part, obj:wnToTree(m.obj)}; }
+  if(m.kind==='inf'){ return {inf:'to', verb:m.verb, mods:(m.mods||[]).map(modToTree)}; }
+  if(m.kind==='clause'){ return {relation:m.relation, clause:clauseToTree(m.clause)}; }
+}
+function wnToTree(wn){ return (wn.mods&&wn.mods.length)? {w:wn.w, mods:wn.mods.map(modToTree)} : {w:wn.w}; }
+function clauseToTree(c){
+  const o={type:c.type};
+  (COMPS[c.type]||['S','V']).forEach(role=>{ const n=c[role]; if(n&&n.w){ o[role]= (n.mods&&n.mods.length)? {w:n.w,mods:n.mods.map(modToTree)} : n.w; } });
+  return o;
+}
+function buildTree(){ const o=clauseToTree(T); if(T.orig) o.orig=T.orig; return o; }
+
+// ===== 동기화: 미리보기 + JSON =====
+function sync(){
+  const tree = buildTree();
+  document.getElementById('jsonout').value = JSON.stringify(tree, null, 2);
+  try { document.getElementById('preview').innerHTML = (typeof _jsonCardHTML==='function') ? (_jsonCardHTML(tree,{tag:'미리보기'})||'') : '<div class="r-diagram">'+buildTreeSVG(tree)+'</div>'; }
+  catch(e){ document.getElementById('preview').innerHTML = '<div class="live-hint">'+esc2(e.message)+'</div>'; }
+}
+function copyJSON(){ const t=document.getElementById('jsonout'); t.select(); navigator.clipboard?.writeText(t.value); }
+
+// 데모 예시로 시작
+T = { type:'2형식', orig:'The concept of the Global Positioning System is simple.',
+  S:{w:'concept', mods:[{kind:'word',w:'The',mods:[]},{kind:'prep',prep:'of',obj:{w:'System',mods:[{kind:'word',w:'the',mods:[]},{kind:'word',w:'Global',mods:[]},{kind:'word',w:'Positioning',mods:[]}]}}]},
+  V:{w:'is',mods:[]}, C:{w:'simple',mods:[]}, O:{w:'',mods:[]}, IO:{w:'',mods:[]}, OC:{w:'',mods:[]} };
+renderForm(); sync();
+</script>
+</body>
+</html>
