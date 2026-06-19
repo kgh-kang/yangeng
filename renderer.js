@@ -786,11 +786,11 @@ function _rkObjInline(objNode, sz) {
         const items = objNode.and || objNode.or;
         let x = 0, svg = '', belowH = 0, firstLeg = 0, maxR = 0;
         items.forEach((it, i) => {
-            if (i > 0) {                                       // 접속사: 점선 + 라벨(회색)
+            if (i > 0) {                                       // 접속사: 정상 검정 글자 + 글자 아래 점선 다리
                 const cw = _measure(conj, f);
-                svg += `<line x1="${x.toFixed(1)}" y1="${(hsz - 4).toFixed(1)}" x2="${(x + cw + 10).toFixed(1)}" y2="${(hsz - 4).toFixed(1)}" stroke="${_RK.sub}" stroke-width="1.3" stroke-dasharray="2 2"/>`;
-                svg += _txt(x + 5, hsz, conj, hsz, _RK.restored);
-                x += cw + 14;
+                svg += _txt(x + 6, hsz, conj, hsz, _RK.mod);
+                svg += `<line x1="${x.toFixed(1)}" y1="${(hsz + 3).toFixed(1)}" x2="${(x + cw + 12).toFixed(1)}" y2="${(hsz + 3).toFixed(1)}" stroke="${_RK.sub}" stroke-width="1.4" stroke-dasharray="2 2"/>`;
+                x += cw + 16;
             }
             const wn = _wn(it), ww = _measure(wn.w, f);
             svg += _txt(x, hsz, wn.w, hsz, /^\(/.test(wn.w) ? _RK.restored : _RK.mod);
