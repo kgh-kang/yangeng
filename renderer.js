@@ -662,9 +662,17 @@ function drawJSON() {
         _jsonError('JSON을 읽을 수 없어요. Claude가 출력한 <strong>분석 JSON</strong>(또는 <code>```json</code> 블록)을 그대로 붙여넣어 주세요.<br><small>' + esc(e.message) + '</small>');
         return;
     }
-    const R = _normalizeR(Array.isArray(obj) ? obj[0] : obj);
+    const root = Array.isArray(obj) ? obj[0] : obj;
+    // 트리 스키마(S/V 키 + 워드노드)면 재귀 트리 렌더러로
+    if (root && (root.S || root.s) && (root.V || root.v)) {
+        renderTreeCard(root);
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        return;
+    }
+    // 평면 스키마(R 객체)면 기존 렌더러로
+    const R = _normalizeR(root);
     if (!R || !R.type || !R.verb) {
-        _jsonError('JSON 형식이 올바르지 않아요. 최소한 <code>type</code>, <code>verb</code>, <code>sub</code> 가 필요합니다.');
+        _jsonError('JSON 형식이 올바르지 않아요. 트리형(<code>S</code>,<code>V</code>) 또는 평면형(<code>type</code>,<code>verb</code>,<code>sub</code>)이 필요합니다.');
         return;
     }
     document.body.classList.add('searched');
@@ -672,12 +680,165 @@ function drawJSON() {
     render(R);
     window.scrollTo({ top: 0, behavior: 'auto' });
 }
+// 트리 JSON → 결과 카드(재귀 구조도)
+function renderTreeCard(node) {
+    document.body.classList.add('searched');
+    const sp = document.getElementById('spell-area'); if (sp) sp.innerHTML = '';
+    const c = document.getElementById('result');
+    const type = node.type || '';
+    const KO = { '1형식': '자존형', '2형식': '의존형', '3형식': '소유형', '4형식': '수여형', '5형식': '복합형' };
+    let svg;
+    try { svg = buildTreeSVG(node); }
+    catch (e) { _jsonError('구조도 생성 실패: ' + esc(e.message)); return; }
+    c.innerHTML = `
+        <div class="result-card">
+            <div class="r-badge-area">
+                <div class="r-badge badge-${(type[0] || '')}">${esc(type)} ${esc(KO[type] || '')}</div>
+                <span class="r-sent-type">${esc(node.sentType || '평서문')}</span>
+            </div>
+            ${node.orig ? `<div class="r-original">${esc(node.orig)}</div>` : ''}
+            <div class="r-diagram-wrap"><div class="r-diagram">${svg}</div></div>
+            <div class="diagram-legend">
+                <span><i style="background:${_RK.S}"></i>주어</span>
+                <span><i style="background:${_RK.V}"></i>동사</span>
+                <span><i style="background:${_RK.O}"></i>목적어</span>
+                <span><i style="background:${_RK.OC}"></i>보어</span>
+                <span><i style="background:${_RK.sub}"></i>수식어·종속절</span>
+            </div>
+        </div>`;
+    c.setAttribute('tabindex', '-1');
+    c.focus({ preventScroll: true });
+}
 // 모드 전환 (문장 분석 / JSON 시각화)
 function setMode(mode) {
     document.body.setAttribute('data-mode', mode === 'json' ? 'json' : 'text');
     document.querySelectorAll('.mode-tab').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
     const f = mode === 'json' ? document.getElementById('json-area') : document.getElementById('inp');
     if (f) f.focus();
+}
+
+// ================================================================
+//  재귀 트리 구조도 렌더러 (임의 깊이 중첩) — Claude 트리 JSON용
+//   노드: 절 { type, S,V,O,IO,C,OC: 워드노드, rel/antecedent }
+//   워드노드: { w:"단어", mods:[자식] }  (또는 문자열)
+//   자식(수식어): "단어" | {prep,obj} | {part,obj} | {inf:"to",verb,mods} | {clause:절}
+// ================================================================
+function _g(dx, dy, inner) { return `<g transform="translate(${(+dx).toFixed(1)},${(+dy).toFixed(1)})">${inner}</g>`; }
+function _wn(x) { return (x && typeof x === 'object') ? { w: x.w || x.head || '', mods: x.mods || [] } : { w: x || '', mods: [] }; }
+function _mfont(sz) { return '600 ' + sz + 'px ' + _FONT_STACK; }
+
+// 수식어 묶음(워드 가로 + 구 세로) — local (0,0) 기준 → {svg,w,h}
+function _rkMods(mods, sz) {
+    if (!mods || !mods.length) return { svg: '', w: 0, h: 0 };
+    const msz = Math.max(11, sz - 6);
+    const words = mods.filter(m => typeof m === 'string');
+    const phrases = mods.filter(m => m && typeof m === 'object');
+    let svg = '', w = 0, y = 0;
+    if (words.length) {                       // 단어 수식어: \word 가로 나열
+        let x = 0;
+        words.forEach(m => {
+            const restored = /^\(/.test(m);
+            svg += _line(x, 3, x + 8, 12, 1.6, _RK.sub);
+            svg += _txt(x + 11, 13, m, msz, restored ? _RK.restored : _RK.mod, restored);
+            x += 14 + _measure(m, '400 ' + msz + 'px ' + _FONT_STACK);
+        });
+        w = x; y = msz + 8;
+    }
+    phrases.forEach(p => {                     // 구 수식어: 세로로 스택
+        const r = _rkPhrase(p, sz);
+        svg += _g(0, y, r.svg);
+        y += r.h + 6; if (r.w > w) w = r.w;
+    });
+    return { svg, w, h: y };
+}
+
+// 구 수식어 1개 (전치사구/분사구문/to부정사/종속절) — local (0,0) → {svg,w,h}
+function _rkPhrase(p, sz) {
+    const msz = Math.max(11, sz - 5);
+    const K = _RK.sub;
+    if (p.w !== undefined && !p.prep && !p.part && !p.inf && !p.clause) {  // 워드노드 수식어(자식 보유)
+        const wn = _wn(p);
+        let svg = _line(0, 3, 8, 12, 1.6, K) + _txt(11, 13, wn.w, msz, /^\(/.test(wn.w) ? _RK.restored : _RK.mod);
+        let w = 14 + _measure(wn.w, '400 ' + msz + 'px ' + _FONT_STACK), h = msz + 8;
+        if (wn.mods && wn.mods.length) { const m = _rkMods(wn.mods, sz - 1); svg += _g(11, h, m.svg); h += m.h; w = Math.max(w, 11 + m.w); }
+        return { svg, w, h };
+    }
+    if (p.clause) {                            // 종속절: 라벨 + 미니 절(재귀)
+        const lab = ((p.clause.relation || p.relation || p.rel || '') + ' ' + (p.clause.type || '')).trim() || '종속절';
+        let svg = _txt(2, msz, '[' + lab + ']', Math.max(10, msz - 1), _RK.restored, true);
+        const sub = _rkClause(p.clause, { size: Math.max(13, sz - 4), color: _RK.sub });
+        svg += _g(6, msz + 3, sub.svg);
+        return { svg, w: Math.max(sub.w + 6, 60), h: msz + 3 + sub.h };
+    }
+    // prep / part / inf : "라벨 │ 목적어" 받침대
+    const label = p.prep || p.part || (p.inf ? p.inf : '');
+    const obj = _wn(p.obj || (p.inf ? { w: p.verb, mods: p.mods } : ''));
+    const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
+    const objW = _measure(obj.w, '400 ' + msz + 'px ' + _FONT_STACK);
+    const sepX = labW + 12;
+    const objX = sepX + 8;
+    let svg = '';
+    svg += _line(6, 0, 6, 13, 1.6, K);                         // 부모로부터 내려오는 다리
+    svg += _txt(2, 10, label, msz, p.inf ? _RK.restored : _RK.mod, !!p.inf);  // 전치사/분사/to
+    svg += _line(sepX, 2, sepX, 13, 1.6, K);                   // 라벨│목적어 구분
+    svg += _txt(objX, 10, obj.w, msz, _RK.mod);               // 목적어
+    const baseRight = objX + objW + 6;
+    svg += _line(0, 13, baseRight, 13, 1.6, K);                // 받침대 가로선
+    let h = 15, w = baseRight;
+    if (obj.mods && obj.mods.length) {                         // 목적어의 수식어(관계절 포함) 재귀
+        const om = _rkMods(obj.mods, sz - 1);
+        svg += _g(objX, 15, om.svg);
+        h = 15 + om.h; w = Math.max(w, objX + om.w);
+    }
+    return { svg, w, h };
+}
+
+// 절 1개 — local (0,0) → {svg,w,h}
+function _rkClause(node, opt) {
+    opt = opt || {};
+    const sz = opt.size || 22;
+    const mc = opt.color || _RK.line;
+    const get = k => node[k] || node[k.toLowerCase()];
+    const order = [['S', _RK.S], ['V', _RK.V], ['IO', _RK.IO], ['O', _RK.O], ['C', _RK.C], ['OC', _RK.OC]];
+    const cells = [];
+    order.forEach(([role, color]) => { const v = get(role); if (v !== undefined && v !== null && (typeof v === 'string' ? v : (v.w || v.head))) cells.push({ role, color, node: _wn(v) }); });
+    if (!cells.length) return { svg: '', w: 0, h: 0 };
+    // 셀별 폭 + 수식어 블록
+    cells.forEach(c => {
+        c.headW = _measure(c.node.w, _mfont(sz));
+        c.mb = _rkMods(c.node.mods, sz);
+        c.cellW = Math.max(c.headW, c.mb.w) + sz * 0.9 + 8;
+    });
+    let x = 0; cells.forEach(c => { c.x = x; c.cx = x + c.cellW / 2; x += c.cellW; });
+    const totalW = x;
+    const baseY = sz + 4;
+    const restoredFill = w => /^\(/.test(w);
+    let svg = '';
+    svg += _line(0, baseY, totalW, baseY, 2.4, mc);          // 기준선
+    cells.forEach(c => {                                      // 셀 단어
+        const fill = restoredFill(c.node.w) ? _RK.restored : c.color;
+        svg += `<text x="${c.cx.toFixed(1)}" y="${(baseY - 5).toFixed(1)}" text-anchor="middle" font-size="${sz}" font-weight="600" fill="${fill}"${restoredFill(c.node.w) ? ' font-style="italic"' : ''}>${_sx(c.node.w)}</text>`;
+    });
+    cells.forEach((c, i) => {                                 // 구분선
+        if (i === 0) return;
+        const bx = c.x, prev = cells[i - 1];
+        if (c.role === 'C' || c.role === 'OC') svg += _line(bx, baseY, bx + sz * 0.9, baseY - sz, 2.2, mc);  // 보어 사선
+        else if (prev.role === 'S') svg += _line(bx, baseY - sz - 2, bx, baseY + sz * 0.6, 2.2, mc);          // S│V 관통
+        else svg += _line(bx, baseY - sz - 2, bx, baseY, 2.2, mc);                                            // 반선
+    });
+    let maxBottom = baseY + 14;
+    cells.forEach(c => {                                      // 셀 아래 수식어
+        if (!c.mb.h) return;
+        svg += _g(c.x + 6, baseY + 4, c.mb.svg);
+        const b = baseY + 4 + c.mb.h; if (b > maxBottom) maxBottom = b;
+    });
+    return { svg, w: totalW, h: maxBottom };
+}
+
+function buildTreeSVG(node) {
+    const r = _rkClause(node, { size: 22, color: _RK.line });
+    const W = Math.ceil(r.w + 10), H = Math.ceil(r.h + 10);
+    return `<svg class="rk-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family='${_FONT_STACK}'>${_g(5, 5, r.svg)}</svg>`;
 }
 
 // 복수 문장 렌더링 — 가로 한 줄 배치
