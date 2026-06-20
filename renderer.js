@@ -981,17 +981,20 @@ function _rkClauseSingle(node, opt) {
     cells.forEach((c, i) => {                                 // 구분선
         if (i === 0) return;
         const bx = c.x, prev = cells[i - 1];
+        if (prev.isClause) return;                           // 명사절 주어/목적어는 받침대 기둥이 경계를 대신
         if (c.role === 'C' || c.role === 'OC') svg += _line(bx, baseY - sz, bx + sz * 0.9, baseY, 2.2, mc);  // 보어 사선(╲)
         else if (prev.role === 'S') svg += _line(bx, baseY - sz - 2, bx, baseY + sz * 0.6, 2.2, mc);          // S│V 관통
         else svg += _line(bx, baseY - sz - 2, bx, baseY, 2.2, mc);                                            // 반선
     });
     let maxBottom = baseY + 16, maxRight = totalW;
     cells.forEach(c => {                                      // 셀 단어(+미니술어 │목적어 / 명사절 받침대)
-        if (c.isClause) {                                    // 명사절: 받침대 위에 미니 절 + 세로 stand
-            const clauseX = c.cx - c.clauseR.w / 2, clauseY = baseY - standGap - c.clauseR.h;
+        if (c.isClause) {                                    // 명사절: 받침대 위 미니 절 + 기둥(다음 성분과의 경계 겸용)
+            const clauseY = baseY - standGap - c.clauseR.h;
+            const boundaryX = c.x + c.cellW;                  // 동사와의 경계 = 받침대 기둥
+            const clauseX = Math.max(0, boundaryX - c.clauseR.w - 4);   // 절을 경계 쪽으로 우측정렬
             svg += _g(clauseX, clauseY, c.clauseR.svg);
-            svg += _line(c.cx, baseY, c.cx, baseY - standGap, 1.8, _RK.sub);   // 받침대 기둥
-            if (c.connector) svg += _txt(c.cx + 5, baseY - standGap + 1, c.connector, Math.max(11, sz - 6), _RK.sub);
+            svg += _line(boundaryX, baseY + sz * 0.5, boundaryX, baseY - standGap, 2.0, mc);   // 기둥=S│V 경계 겸용
+            if (c.connector) svg += _txt(boundaryX + 5, baseY - standGap + 1, c.connector, Math.max(11, sz - 6), _RK.sub);
             const r = clauseX + c.clauseR.w; if (r > maxRight) maxRight = r;
             return;
         }
