@@ -899,6 +899,8 @@ function _rkPhrase(p, sz) {
 
 // 보어/목적어가 목적어를 거느린 미니 술어(진행형·수동분사·원형부정사 보어)인지
 function _isPred(v) { return v && typeof v === 'object' && !v.w && !v.head && (v.part || v.inf || v.verb); }
+// 주어/목적어가 명사절인지 ({clause:…} 또는 절노드 자체 {S,V,…})
+function _isClauseArg(v) { return v && typeof v === 'object' && (v.clause || ((v.S || v.s) && (v.V || v.v))); }
 
 // 절 1개 — 디스패처 (복합술어면 분기)
 function _rkClause(node, opt) {
@@ -942,7 +944,9 @@ function _rkClauseSingle(node, opt) {
     order.forEach(([role, color]) => {
         const v = get(role);
         if (v === undefined || v === null) return;
-        if (_isPred(v)) {                                    // 보어/목적어 = 미니 술어(분사/부정사 + 목적어)
+        if (_isClauseArg(v)) {                              // 주어/목적어 = 명사절 → 받침대 위 미니 절
+            cells.push({ role, color, isClause: true, clauseNode: v.clause || v, connector: v.connector || (v.clause && v.clause.connector) || '', node: { w: '', mods: [] } });
+        } else if (_isPred(v)) {                            // 보어/목적어 = 미니 술어(분사/부정사 + 목적어)
             cells.push({ role, color, pred: v, node: { w: v.verb || v.part || v.inf, mods: v.mods || [] } });
         } else if (typeof v === 'string' ? v : (v.w || v.head)) {
             cells.push({ role, color, node: _wn(v) });
@@ -950,7 +954,16 @@ function _rkClauseSingle(node, opt) {
     });
     if (!cells.length) return { svg: '', w: 0, h: 0 };
     // 셀 폭 = 머리단어(미니술어면 head│obj) vs 수식어 트리 폭 중 큰 쪽. 여백은 작게.
+    const standGap = 16;
+    let pedestalTop = 0;
     cells.forEach(c => {
+        if (c.isClause) {                                    // 명사절: 받침대 위 미니 절
+            c.clauseR = _rkClause(c.clauseNode, { size: Math.max(13, sz - 3), color: mc });
+            c.headW = 0; c.mb = { svg: '', w: 0, h: 0 };
+            c.cellW = Math.max(c.clauseR.w, 40) + sz * 0.5 + 12;
+            pedestalTop = Math.max(pedestalTop, c.clauseR.h + standGap);
+            return;
+        }
         c.headW = _measure(c.node.w, _mfont(sz));
         c.mb = _rkMods(c.node.mods, sz);
         if (c.pred && c.pred.obj != null && c.pred.obj !== '') {
@@ -961,7 +974,7 @@ function _rkClauseSingle(node, opt) {
     });
     let x = 0; cells.forEach(c => { c.x = x; c.cx = x + c.cellW / 2; x += c.cellW; });
     const totalW = x;
-    const baseY = sz + 4;
+    const baseY = sz + 4 + pedestalTop;
     const restoredFill = w => /^\(/.test(w);
     let svg = '';
     svg += _line(0, baseY, totalW, baseY, 2.4, mc);          // 기준선
@@ -973,7 +986,15 @@ function _rkClauseSingle(node, opt) {
         else svg += _line(bx, baseY - sz - 2, bx, baseY, 2.2, mc);                                            // 반선
     });
     let maxBottom = baseY + 16, maxRight = totalW;
-    cells.forEach(c => {                                      // 셀 단어(+미니술어 │목적어)
+    cells.forEach(c => {                                      // 셀 단어(+미니술어 │목적어 / 명사절 받침대)
+        if (c.isClause) {                                    // 명사절: 받침대 위에 미니 절 + 세로 stand
+            const clauseX = c.cx - c.clauseR.w / 2, clauseY = baseY - standGap - c.clauseR.h;
+            svg += _g(clauseX, clauseY, c.clauseR.svg);
+            svg += _line(c.cx, baseY, c.cx, baseY - standGap, 1.8, _RK.sub);   // 받침대 기둥
+            if (c.connector) svg += _txt(c.cx + 5, baseY - standGap + 1, c.connector, Math.max(11, sz - 6), _RK.sub);
+            const r = clauseX + c.clauseR.w; if (r > maxRight) maxRight = r;
+            return;
+        }
         if (c.pred) {
             const startX = (c.role === 'C' || c.role === 'OC') ? c.x + sz * 0.9 + 4 : c.x + 6;
             svg += `<text x="${startX.toFixed(1)}" y="${(baseY - 5).toFixed(1)}" font-size="${sz}" font-weight="600" fill="${c.color}">${_sx(c.node.w)}</text>`;
