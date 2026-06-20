@@ -464,19 +464,18 @@ body.searched .home-extra { display: none; }
 .r-diagram-wrap {
     padding: 48px 32px;
     overflow-x: auto;
-    display: flex;
-    justify-content: center;
     -webkit-overflow-scrolling: touch;
 }
 
-.r-diagram-wrap::-webkit-scrollbar { height: 4px; }
+.r-diagram-wrap::-webkit-scrollbar { height: 6px; }
 .r-diagram-wrap::-webkit-scrollbar-track { background: transparent; }
-.r-diagram-wrap::-webkit-scrollbar-thumb { background: var(--text-3); border-radius: 2px; }
+.r-diagram-wrap::-webkit-scrollbar-thumb { background: var(--text-3); border-radius: 3px; }
 
+/* display:table + margin:auto → 좁으면 가운데, 넓으면 좌측 정렬(overflow 우측) + 스크롤 (양쪽 잘림 방지) */
 .r-diagram {
-    display: inline-block;
+    display: table;
+    margin: 0 auto;
     padding: 8px 20px;
-    min-width: min-content;
 }
 
 /* Main row */

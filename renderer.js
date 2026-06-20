@@ -882,7 +882,7 @@ function _rkPhrase(p, sz) {
     const labX = 8;
     const labW = _measure(label, '400 ' + msz + 'px ' + _FONT_STACK);
     const prepY = msz - 1, baseY = msz + 18, lineY = baseY - 4;
-    const objX = labX + labW + 14;                            // 목적어를 전치사 오른쪽으로(우측 드리프트)
+    const objX = 13;                                          // 목적어: 받침선 위, 전치사 바로 아래(약간 우측). 벌어짐은 중첩 누적으로 자연 발생
     let svg = _line(1, -4, 1, baseY, 1.8, K) + _txt(labX, prepY, label, msz, _RK.mod);
     const ob = _rkObjInline(objNode, sz), dy = lineY - ob.headH;
     svg += _g(objX, dy, ob.svg);                               // 목적어(머리는 받침선 위, 머리 수식어는 아래)
