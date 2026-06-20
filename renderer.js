@@ -853,26 +853,32 @@ function _rkPhrase(p, sz) {
         svg += _g(4, top, sub.svg);
         return { svg, w: Math.max(sub.w + 4, 40), h: top + sub.h };
     }
-    // to부정사(동사 보유): ㄴ 받침에 미니 V│O — "to"(다리 위) / "fix │ 목적어"(받침선 위)
-    if (p.inf && p.verb) {
-        const verbW = _measure(p.verb, '400 ' + msz + 'px ' + _FONT_STACK);
+    // to부정사/분사구(목적어 보유): 미니 V│O — to부정사는 "to"(위)+"verb │ 목적어", 분사는 "분사 │ 목적어"(한 줄, 교재 방식)
+    const isInfPred = !!(p.inf && p.verb);
+    const isPartPred = !!(p.part && ((p.obj != null && p.obj !== '') || p.objs));
+    if (isInfPred || isPartPred) {
+        const head = isInfPred ? p.verb : p.part;
+        const headW = _measure(head, '400 ' + msz + 'px ' + _FONT_STACK);
         const objNode = (p.obj != null && p.obj !== '') ? p.obj : (p.objs ? { and: p.objs } : null);
-        const prepY = msz - 1, baseY = msz + 18, lineY = baseY - 4, verbX = 13;
-        let svg = _line(1, -4, 1, baseY, 1.8, K) + _txt(8, prepY, p.inf, msz, _RK.mod) + _txt(verbX, lineY, p.verb, msz, _RK.mod);
-        let baseRight = verbX + verbW + 8, h = baseY + 4, w;
-        if (objNode != null) {                                 // fix │ 목적어
+        const baseY = isInfPred ? msz + 18 : msz + 6;          // 분사는 위 마커 없어 다리 짧게
+        const lineY = baseY - 4, headX = isInfPred ? 13 : 8;
+        let svg = _line(1, -4, 1, baseY, 1.8, K);
+        if (isInfPred) svg += _txt(8, msz - 1, p.inf, msz, _RK.mod);   // 'to'는 다리 위
+        svg += _txt(headX, lineY, head, msz, _RK.mod);                 // 동사/분사 (받침선 위)
+        let baseRight = headX + headW + 8, h = baseY + 4, w;
+        if (objNode != null) {                                 // 동사/분사 │ 목적어
             const sepX = baseRight;
-            svg += _line(sepX, baseY - msz, sepX, baseY, 1.5, K);   // 동사│목적어 반선
+            svg += _line(sepX, baseY - Math.min(msz, lineY + 2), sepX, baseY, 1.5, K);   // V│O 반선
             const ob = _rkObjInline(objNode, sz), ox = sepX + 8, dy = lineY - ob.headH;
             svg += _g(ox, dy, ob.svg);
             baseRight = ox + ob.w + 4; h = Math.max(h, dy + ob.h);
         }
         svg += _line(1, baseY, baseRight, baseY, 1.8, K);      // 가로 받침선
         w = baseRight + 4;
-        if (p.mods && p.mods.length) {                         // 부정사 동사의 (부사적) 수식어 → 받침선 아래
+        if (p.mods && p.mods.length) {                         // 동사/분사의 (부사적) 수식어 → 받침선 아래
             const vm = _rkMods(p.mods, sz - 1);
-            svg += _g(verbX, baseY + 3, vm.svg);
-            h = Math.max(h, baseY + 3 + vm.h); w = Math.max(w, verbX + vm.w);
+            svg += _g(headX, baseY + 3, vm.svg);
+            h = Math.max(h, baseY + 3 + vm.h); w = Math.max(w, headX + vm.w);
         }
         return { svg, w, h };
     }
