@@ -69,15 +69,48 @@
     params.cache_control = { type: 'ephemeral' };
     // 안전 분류기에 걸려 거절되면 서버가 다른 모델로 이어서 답하도록 기본 폴백을 켠다.
     if (info.fallbacks) { params.betas = ['server-side-fallback-2026-07-01']; params.fallbacks = 'default'; }
+    if (settings.webSearch) {
+      // Opus/Sonnet은 동적 필터링이 있는 최신 버전, Haiku는 기본 버전
+      params.tools = [{ type: info.id === 'claude-haiku-4-5' ? 'web_search_20250305' : 'web_search_20260209', name: 'web_search', max_uses: 5 }];
+    }
 
-    const stream = client.beta.messages.stream(params, { signal });
     try {
-      for await (const ev of stream) {
-        if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') yield { type: 'text', text: ev.delta.text };
-        if (ev.type === 'content_block_delta' && ev.delta.type === 'thinking_delta') yield { type: 'thinking', text: ev.delta.thinking };
+      let msgs = params.messages;
+      for (let round = 0; ; round++) {
+        const stream = client.beta.messages.stream({ ...params, messages: msgs }, { signal });
+        const toolInput = {}; // 블록 index → 스트리밍 중인 검색어 JSON
+        for await (const ev of stream) {
+          if (ev.type === 'content_block_start') {
+            const b = ev.content_block;
+            if (b.type === 'server_tool_use' && b.name === 'web_search') toolInput[ev.index] = '';
+            if (b.type === 'web_search_tool_result') {
+              if (Array.isArray(b.content)) yield { type: 'sources', items: b.content.filter((r) => r.url).map((r) => ({ url: r.url, title: r.title || r.url })) };
+              else yield { type: 'search_error', code: b.content && b.content.error_code };
+            }
+          }
+          if (ev.type === 'content_block_delta') {
+            const d = ev.delta;
+            if (d.type === 'text_delta') yield { type: 'text', text: d.text };
+            else if (d.type === 'thinking_delta') yield { type: 'thinking', text: d.thinking };
+            else if (d.type === 'input_json_delta' && ev.index in toolInput) toolInput[ev.index] += d.partial_json;
+            else if (d.type === 'citations_delta' && d.citation && d.citation.url) yield { type: 'cite', url: d.citation.url, title: d.citation.title || d.citation.url };
+          }
+          if (ev.type === 'content_block_stop' && ev.index in toolInput) {
+            let q = '';
+            try { q = JSON.parse(toolInput[ev.index] || '{}').query || ''; } catch (_) { /* 잘린 JSON이면 검색어 없이 표시 */ }
+            yield { type: 'search', query: q };
+            delete toolInput[ev.index];
+          }
+        }
+        const final = await stream.finalMessage();
+        // 서버 도구 루프가 한도에 걸려 멈추면(pause_turn) 지금까지의 답변을 그대로 붙여 이어서 요청한다
+        if (final.stop_reason === 'pause_turn' && round < 3) {
+          msgs = [...msgs, { role: 'assistant', content: final.content }];
+          continue;
+        }
+        yield { type: 'done', stopReason: final.stop_reason, model: final.model, usage: final.usage };
+        return;
       }
-      const final = await stream.finalMessage();
-      yield { type: 'done', stopReason: final.stop_reason, model: final.model, usage: final.usage };
     } catch (e) {
       throw Object.assign(e, { friendly: friendlyError(e, Anthropic) });
     }
@@ -96,7 +129,8 @@
     const t = setTimeout(res, ms);
     signal && signal.addEventListener('abort', () => { clearTimeout(t); rej(Object.assign(new Error('aborted'), { name: 'AbortError' })); }, { once: true });
   });
-  async function* demo({ messages, signal }) {
+  async function* demo(opts) {
+    const { messages, signal } = opts;
     const last = [...messages].reverse().find((m) => m.role === 'user');
     const text = (last && last.content) || '';
     const hasImg = last && (last.images || []).length;
@@ -106,6 +140,19 @@
       if (!hasImg) {
         const think = '질문의 핵심을 파악하고, 답변에 필요한 내용을 순서대로 정리하는 중이에요.';
         for (let i = 0; i < think.length; i += 6) { yield { type: 'thinking', text: think.slice(i, i + 6) }; await sleep(30, signal); }
+      }
+      if (opts.settings && opts.settings.webSearch && !hasImg) {
+        const q = text.replace(/\s+/g, ' ').slice(0, 24);
+        await sleep(300, signal);
+        yield { type: 'search', query: q };
+        await sleep(500, signal);
+        yield { type: 'sources', items: [
+          { url: 'https://example.com/guide', title: `${q} — 예시 안내 문서` },
+          { url: 'https://example.org/news/2026', title: '예시 뉴스: 데모 모드의 검색 결과' },
+          { url: 'https://example.net/faq', title: '자주 묻는 질문 (예시)' },
+          { url: 'https://example.edu/notes', title: '참고 자료 (예시)' },
+        ] };
+        yield { type: 'cite', url: 'https://example.com/guide', title: `${q} — 예시 안내 문서` };
       }
       await sleep(200, signal);
       for (let i = 0; i < reply.length;) {

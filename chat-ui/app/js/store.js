@@ -2,7 +2,7 @@
 (function () {
   const K_CONVS = 'moa.convs.v1';
   const K_SETTINGS = 'moa.settings.v1';
-  const DEFAULTS = { name: '', apiKey: '', model: 'claude-opus-5-5', effort: 'medium', system: '', theme: 'system' };
+  const DEFAULTS = { name: '', apiKey: '', model: 'claude-opus-5-5', effort: 'medium', system: '', theme: 'system', webSearch: false };
 
   const read = (k, fallback) => {
     try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (_) { return fallback; }
@@ -56,6 +56,31 @@
     togglePin(id) { const c = this.get(id); if (c) { c.pinned = !c.pinned; this.commit(c, { touch: false }); } },
     remove(id) { convs = convs.filter((c) => c.id !== id); persist(); emit('convs'); },
     clearAll() { convs = []; persist(); emit('convs'); },
+    /** 백업 파일 내용 (API 키는 넣지 않는다) */
+    backup() {
+      const { apiKey, ...safe } = settings;
+      return JSON.stringify({ app: 'moa', version: 1, exportedAt: new Date().toISOString(), settings: safe, conversations: convs }, null, 1);
+    },
+    /** 백업 복원: 같은 id는 더 최근 것으로, 새 대화는 추가. 반환: 추가·갱신된 대화 수 */
+    restore(text) {
+      let data;
+      try { data = JSON.parse(text); } catch (_) { throw new Error('백업 파일을 읽지 못했어요. 모아에서 받은 .json 파일인지 확인해 주세요.'); }
+      if (!data || data.app !== 'moa' || !Array.isArray(data.conversations)) throw new Error('모아 백업 파일이 아니에요.');
+      let n = 0;
+      for (const c of data.conversations) {
+        if (!c || typeof c.id !== 'string' || !Array.isArray(c.messages)) continue;
+        const clean = {
+          id: c.id, title: String(c.title || ''), createdAt: +c.createdAt || Date.now(), updatedAt: +c.updatedAt || Date.now(), pinned: !!c.pinned,
+          messages: c.messages.filter((m) => m && (m.role === 'user' || m.role === 'assistant')).map((m) => ({ ...m, id: String(m.id || uid()), content: String(m.content || ''), pending: undefined })),
+        };
+        const i = convs.findIndex((x) => x.id === clean.id);
+        if (i < 0) { convs.push(clean); n++; } else if (clean.updatedAt > convs[i].updatedAt) { convs[i] = clean; n++; }
+      }
+      const r = persist();
+      emit('convs');
+      if (r === 'failed') throw new Error('저장 공간이 부족해 백업을 다 불러오지 못했어요.');
+      return n;
+    },
     exportMarkdown(c) {
       const lines = [`# ${c.title || '새 대화'}`, ''];
       for (const m of c.messages) {

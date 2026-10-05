@@ -202,6 +202,50 @@ const tests = {
     assert(await p.isVisible('.msg--user .imgs img'), '보낸 이미지 표시');
     assert(await p.isHidden('#attach-list'), '첨부 목록 비움');
   },
+  async '웹 검색(데모): 켜기 → 검색 중/검색함 표시 → 인용 출처가 먼저'(b) {
+    const p = await newPage(b);
+    await p.click('[data-action="toggle-search"]');
+    assert((await p.getAttribute('[data-action="toggle-search"]', 'aria-pressed')) === 'true', '토글 켜짐');
+    await p.fill('#input', '오늘 환율 알려줘');
+    await p.press('#input', 'Enter');
+    await p.waitForSelector('.searching .is-live', { timeout: 3000 });
+    await p.waitForFunction(() => !document.body.classList.contains('is-busy'), null, { timeout: 20000 });
+    assert((await p.textContent('.searching')).includes('검색함'), '검색 완료 표시');
+    assert((await p.$$('.src')).length === 4, '출처 4개');
+    assert(await p.isVisible('.src.is-cited:first-child'), '인용된 출처가 첫 번째');
+    await p.reload();
+    assert((await p.getAttribute('[data-action="toggle-search"]', 'aria-pressed')) === 'true', '설정 유지');
+    assert((await p.$$('.src')).length === 4, '새로고침 후에도 출처 유지');
+  },
+  async '코드 문법 강조'(b) {
+    const p = await newPage(b);
+    await sendAndWait(p, 'JS 코드 예시');
+    assert((await p.$$('.codeblock .tk-k')).length > 0, '키워드 강조');
+    assert((await p.$$('.codeblock .tk-s')).length > 0, '문자열 강조');
+    await p.click('[data-copy-code]');
+  },
+  async '백업 받기 → 모두 삭제 → 백업 불러오기 (API 키는 백업에 없음)'(b) {
+    const p = await newPage(b, { settings: { apiKey: '', name: '지현' } });
+    await sendAndWait(p, '첫 대화');
+    await p.evaluate(() => { const s = JSON.parse(localStorage.getItem('moa.settings.v1')); s.apiKey = 'sk-ant-secret'; localStorage.setItem('moa.settings.v1', JSON.stringify(s)); });
+    await p.reload();
+    await p.click('.me');
+    const [dl] = await Promise.all([p.waitForEvent('download'), p.click('[data-backup]')]);
+    const text = fs.readFileSync(await dl.path(), 'utf8');
+    assert(!text.includes('sk-ant-secret'), 'API 키가 백업에 없어야 함');
+    assert(JSON.parse(text).conversations.length === 1, '대화 1개 백업');
+    await p.click('[data-clear-all]');
+    await p.click('.dialog [data-yes]');
+    assert(!(await p.$('.conv')), '모두 삭제됨');
+    await p.click('.me');
+    await p.setInputFiles('[data-restore-file]', { name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(text) });
+    await p.waitForSelector('.conv');
+    assert((await p.$$('.conv')).length === 1, '복원됨');
+    await p.click('.me');
+    await p.setInputFiles('[data-restore-file]', { name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"nope":1}') });
+    await p.waitForSelector('.toast');
+    assert((await p.textContent('.toast')).includes('백업 파일이 아니에요'), '잘못된 파일 안내');
+  },
   async '모바일: 가로 넘침 없음 · 메뉴 서랍 열고 닫기'(b) {
     const p = await newPage(b, { viewport: { width: 390, height: 844 } });
     await sendAndWait(p, '월급 300 저축 계획');
@@ -251,6 +295,42 @@ const liveTests = {
     assert(!calls[0].body.output_config, 'effort 없음');
     assert(!calls[0].body.fallbacks, 'fallbacks 없음');
     assert(!calls[0].body.thinking, 'Haiku는 thinking 없음');
+  },
+  async '실제 SDK: 웹 검색 도구 · 검색어/출처/인용 표시 · pause_turn 이어받기'(b) {
+    const p = await newPage(b, { settings: { apiKey: 'sk-ant-test', webSearch: true } });
+    const search = sse([
+      { type: 'message_start', message: { id: 'm1', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 5, output_tokens: 1 } } },
+      { type: 'content_block_start', index: 0, content_block: { type: 'server_tool_use', id: 'srvtoolu_1', name: 'web_search', input: {} } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '{"query": "서울 ' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'input_json_delta', partial_json: '날씨"}' } },
+      { type: 'content_block_stop', index: 0 },
+      { type: 'content_block_start', index: 1, content_block: { type: 'web_search_tool_result', tool_use_id: 'srvtoolu_1', content: [
+        { type: 'web_search_result', url: 'https://weather.example/seoul', title: '서울 날씨', encrypted_content: 'x', page_age: null },
+        { type: 'web_search_result', url: 'https://news.example/a', title: '기상 뉴스', encrypted_content: 'y', page_age: null },
+      ] } },
+      { type: 'content_block_stop', index: 1 },
+      { type: 'message_delta', delta: { stop_reason: 'pause_turn', stop_sequence: null }, usage: { output_tokens: 3 } },
+      { type: 'message_stop' },
+    ]);
+    const answer = sse([
+      { type: 'message_start', message: { id: 'm2', type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 5, output_tokens: 1 } } },
+      { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '', citations: [] } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'citations_delta', citation: { type: 'web_search_result_location', url: 'https://weather.example/seoul', title: '서울 날씨', cited_text: '맑음', encrypted_index: 'z' } } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: '오늘 서울은 맑아요.' } },
+      { type: 'content_block_stop', index: 0 },
+      { type: 'message_delta', delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 8 } },
+      { type: 'message_stop' },
+    ]);
+    const calls = await mockApi(p, (c, n) => ({ body: n === 1 ? search : answer }));
+    await sendAndWait(p, '서울 날씨');
+    assert(calls[0].body.tools && calls[0].body.tools[0].type === 'web_search_20260209', 'web_search_20260209 도구');
+    assert(calls.length === 2, `pause_turn 뒤 이어서 요청 (${calls.length}회)`);
+    const last = calls[1].body.messages[calls[1].body.messages.length - 1];
+    assert(last.role === 'assistant' && last.content.some((b) => b.type === 'server_tool_use'), '멈춘 답변을 그대로 붙여 보냄');
+    assert((await p.textContent('.searching')).includes('서울 날씨'), '검색어 표시');
+    assert((await p.$$('.src')).length === 2, '출처 2개');
+    assert((await p.getAttribute('.src.is-cited', 'href')) === 'https://weather.example/seoul', '인용 출처 강조');
+    assert((await p.textContent('.msg--ai .ai__body > .md')).includes('맑아요'), '답변 본문');
   },
   async '실제 SDK: 잘못된 키(401)면 안내와 설정 버튼'(b) {
     const p = await newPage(b, { settings: { apiKey: 'sk-ant-wrong' } });

@@ -77,6 +77,47 @@
     return out.join('');
   }
 
+  /* ---------- 코드 문법 강조 (가벼운 토크나이저: 주석·문자열·숫자·키워드·태그) ---------- */
+  const KW = {
+    js: 'await|async|break|case|catch|class|const|continue|default|delete|do|else|export|extends|finally|for|from|function|if|import|in|instanceof|let|new|of|return|static|super|switch|this|throw|try|typeof|var|void|while|yield|true|false|null|undefined|interface|type|enum|implements|readonly|as',
+    py: 'and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|True|False|None|self|print',
+    css: 'important|media|supports|keyframes|from|to|root',
+    sql: 'select|from|where|join|left|right|inner|outer|on|group|by|order|having|limit|insert|into|values|update|set|delete|create|table|alter|drop|and|or|not|null|as|distinct|count|sum|avg|min|max|case|when|then|else|end|union|all|index|primary|key',
+    sh: 'if|then|else|fi|for|in|do|done|while|case|esac|function|return|export|echo|cd|ls|npm|npx|git|pip|python3?|node|sudo|cat|grep|curl',
+    java: 'abstract|boolean|break|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|func|go|if|implements|import|int|interface|long|new|package|private|protected|public|return|short|static|struct|super|switch|this|throw|throws|try|var|void|while|true|false|null|nil|fn|let|mut|pub|use|impl|match',
+  };
+  const LANG = { js: 'js', javascript: 'js', ts: 'js', typescript: 'js', jsx: 'js', tsx: 'js', json: 'js', py: 'py', python: 'py', css: 'css', scss: 'css', sql: 'sql', sh: 'sh', bash: 'sh', shell: 'sh', zsh: 'sh', java: 'java', go: 'java', rust: 'java', rs: 'java', kotlin: 'java', c: 'java', cpp: 'java', 'c++': 'java', cs: 'java', swift: 'java' };
+  const span = (cls, t) => `<span class="tk-${cls}">${esc(t)}</span>`;
+  function highlight(code, lang) {
+    if (code.length > 60000) return esc(code);
+    if (lang === 'html' || lang === 'xml' || lang === 'svg' || lang === 'vue') {
+      return code.replace(/(<!--[\s\S]*?-->)|(<\/?)([\w:-]+)((?:\s+[\w:@.-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?>)|([^<]+|<)/g, (m, cm, open, tag, attrs, close, text) => {
+        if (cm) return span('c', cm);
+        if (tag) {
+          const a = (attrs || '').replace(/([\w:@.-]+)(\s*=\s*)?("[^"]*"|'[^']*'|[^\s>]+)?/g, (x, n, eq, v) => span('a', n) + (eq ? esc(eq) : '') + (v ? span('s', v) : ''));
+          return esc(open) + span('t', tag) + a + esc(close);
+        }
+        return esc(text || m);
+      });
+    }
+    const fam = LANG[lang];
+    if (!fam) return esc(code);
+    const kw = KW[fam];
+    const comment = fam === 'py' || fam === 'sh' ? String.raw`#[^\n]*` : fam === 'sql' ? String.raw`--[^\n]*` : String.raw`\/\/[^\n]*|\/\*[\s\S]*?\*\/`;
+    const str = String.raw`${'`'}(?:\\[\s\S]|[^${'`'}\\])*${'`'}|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'`;
+    const num = String.raw`\b\d[\d_]*(?:\.\d+)?(?:e[+-]?\d+)?\b`;
+    const fn = String.raw`[A-Za-z_$][\w$]*(?=\s*\()`;
+    const re = new RegExp(`(${comment})|(${str})|(${num})|(\\b(?:${kw})\\b)|(${fn})`, fam === 'sql' ? 'gi' : 'g');
+    let out = '', last = 0, m;
+    while ((m = re.exec(code))) {
+      out += esc(code.slice(last, m.index));
+      out += m[1] ? span('c', m[0]) : m[2] ? span('s', m[0]) : m[3] ? span('n', m[0]) : m[4] ? span('k', m[0]) : span('f', m[0]);
+      last = re.lastIndex;
+      if (m[0] === '') re.lastIndex++;
+    }
+    return out + esc(code.slice(last));
+  }
+
   function render(src) {
     const parts = src.split(/^```/m);
     let html = '';
@@ -89,10 +130,10 @@
       const canPreview = PREVIEWABLE.has(lang) && !open;
       html += `<div class="codeblock" data-lang="${esc(lang || 'text')}"><div class="codeblock__head"><span>${esc(lang || 'code')}</span><span class="codeblock__btns">` +
         (canPreview ? '<button type="button" data-preview>미리보기</button>' : '') +
-        `<button type="button" data-copy-code>복사</button></span></div><pre tabindex="0"><code>${esc(code)}</code></pre></div>`;
+        `<button type="button" data-copy-code>복사</button></span></div><pre tabindex="0"><code>${highlight(code, lang)}</code></pre></div>`;
     });
     return html;
   }
 
-  window.MoaMarkdown = { render, inline, esc };
+  window.MoaMarkdown = { render, inline, esc, highlight };
 })();

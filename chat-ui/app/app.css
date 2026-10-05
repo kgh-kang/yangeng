@@ -280,6 +280,8 @@ textarea.input { height: auto; min-height: 96px; padding: 14px 16px; resize: ver
 .seg--full button { flex: 1; padding: 10px 6px; font-size: 14.5px; }
 .sheet__foot { display: flex; gap: 8px; margin-top: 24px; position: sticky; bottom: -22px; background: var(--sheet); padding: 12px 0 0; }
 .sheet__foot .btn { flex: 1; height: 54px; border-radius: 16px; font-size: 17px; }
+.data-btns { display: flex; gap: 8px; }
+.data-btns .btn { flex: 1; height: 48px; }
 .danger-link { display: block; margin: 20px auto 0; font-size: 14px; color: var(--red-fill); font-weight: 600; padding: 8px; }
 .dialog { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(360px, calc(100% - 40px)); background: var(--sheet); border-radius: 24px; padding: 24px 20px 20px; z-index: 80; animation: pop .22s var(--ease); }
 .dialog h2 { font-size: 20px; margin: 0 0 6px; letter-spacing: -.03em; }
@@ -317,8 +319,42 @@ textarea.input { height: auto; min-height: 96px; padding: 14px 16px; resize: ver
   .thread, .welcome__in { padding-inline: 16px; }
   .panel { inset: 0; border-radius: 0; }
   .desktop-only { display: none; }
+  .tool-toggle { padding: 0 10px; }
+  .tool-toggle__label { display: none; }
+  .sources__list { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -16px; padding: 0 16px 4px; scrollbar-width: none; }
+  .sources__list::-webkit-scrollbar { display: none; }
+  .src { flex: 0 0 72%; scroll-snap-align: start; }
   .mobile-only { display: inline-grid; }
   .to-bottom { bottom: 130px; }
   .bubble, .imgs { max-width: 92%; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* 코드 문법 강조 — 코드 블록은 두 테마 모두 어두운 바탕이라 고정색 */
+.tk-k { color: #82b1ff; }
+.tk-s { color: #a8e07d; }
+.tk-n { color: #f9c86b; }
+.tk-c { color: #8893a0; font-style: italic; }
+.tk-f { color: #d4a5ff; }
+.tk-t { color: #ff9b9b; }
+.tk-a { color: #ffd27a; }
+
+/* 웹 검색 */
+.tool-toggle { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--sub); background: transparent; align-self: center; flex: none; }
+.tool-toggle:hover { background: var(--fill-strong); }
+.tool-toggle[aria-pressed="true"] { background: var(--blue-weak); color: var(--blue-text); }
+.searching { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 10px; }
+.searching span { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--fill); color: var(--sub); font-size: 13.5px; font-weight: 500; max-width: 100%; }
+.searching span b { font-weight: 600; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.searching .is-live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--blue-bright); animation: pulse 1.2s infinite var(--ease); flex: none; }
+.sources { margin: 14px 0 2px; }
+.sources__label { font-size: 13.5px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+.sources__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.src { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--fill); text-decoration: none; color: var(--fg); min-width: 0; }
+.src:hover { background: var(--fill-strong); }
+.src__fav { width: 28px; height: 28px; border-radius: 8px; background: var(--sheet); color: var(--blue-text); display: grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; text-transform: uppercase; }
+.src__txt { min-width: 0; }
+.src__txt b { display: block; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.src__txt small { display: block; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.src.is-cited .src__fav { background: var(--blue); color: var(--on-blue); }
+.sources__more { margin-top: 8px; font-size: 13.5px; font-weight: 600; color: var(--blue-text); padding: 6px 4px; }

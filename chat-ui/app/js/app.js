@@ -17,7 +17,7 @@
     panel: $('#panel'), panelBody: $('#panel-body'), panelTitle: $('#panel-title'), panelSub: $('#panel-sub'), layer: $('#layer'),
   };
 
-  const S = { conv: null, busy: false, abort: null, attachments: [], panel: null, query: '', editing: null };
+  const S = { conv: null, busy: false, abort: null, attachments: [], panel: null, query: '', editing: null, openSources: new Set() };
   const MAX_ATTACH = 5;
 
   const I = {
@@ -91,6 +91,13 @@
     });
   }
 
+  function downloadFile(name, text, type) {
+    const blob = new Blob([text], { type: `${type};charset=utf-8` });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name.replace(/[\\/:*?"<>|]/g, '_');
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
   async function copyText(text) {
     try { await navigator.clipboard.writeText(text); return true; } catch (_) {
       const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
@@ -143,6 +150,7 @@
     el.mePlan.textContent = live ? 'Claude 연결됨' : '데모 모드';
     el.liveDot.classList.toggle('is-live', live);
     el.demoNotice.hidden = live;
+    $$('[data-action="toggle-search"]').forEach((b) => b.setAttribute('aria-pressed', String(!!st.webSearch)));
     el.greeting.innerHTML = `${st.name ? esc(st.name) + '님,' : '안녕하세요,'}<br><em>무엇이든</em> 물어보세요`;
     el.title.textContent = (S.conv && S.conv.title) || '새 대화';
     document.title = S.conv && S.conv.title ? `${S.conv.title} · 모아` : '모아';
@@ -170,8 +178,15 @@
     } else if (m.thinking) {
       h += `<details class="think"><summary>생각 과정${m.thinkMs ? ` · ${secs(m.thinkMs)}초` : ''}</summary><div class="think__body md">${md(m.thinking)}</div></details>`;
     }
+    if ((m.searches || []).length) {
+      h += `<div class="searching">${m.searches.map((q, i) => {
+        const live = m.pending && !m.content && i === m.searches.length - 1 && !m.searchDone;
+        return `<span class="${live ? 'is-live' : ''}">${live ? '검색 중' : '검색함'}${q ? ` <b>${esc(q)}</b>` : ''}</span>`;
+      }).join('')}</div>`;
+    }
     if (m.content) h += `<div class="md${m.pending ? ' caret' : ''}">${md(m.content)}</div>`;
     else if (m.pending && !m.thinkStart) h += '<span class="typing" aria-label="답변 작성 중"><i></i><i></i><i></i></span>';
+    if ((m.sources || []).length && !m.pending) h += sourcesHTML(m);
     if (m.stopped) h += '<div class="note">답변을 중간에 멈췄어요.</div>';
     if (m.truncated) h += '<div class="note">답변이 너무 길어서 여기까지만 받았어요. “이어서 써줘”라고 보내 보세요.</div>';
     if (m.error) {
@@ -179,6 +194,15 @@
       h += `<div class="err" role="alert">${I.alert}<span>${esc(m.error)}</span>${fix}<button class="btn btn--weak" data-action="retry">다시 시도</button></div>`;
     }
     return h;
+  }
+  function sourcesHTML(m) {
+    const cited = new Set(m.cited || []);
+    const list = m.sources.slice().sort((a, b) => cited.has(b.url) - cited.has(a.url));
+    const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (_) { return u; } };
+    const item = (s) => `<a class="src${cited.has(s.url) ? ' is-cited' : ''}" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="src__fav" aria-hidden="true">${esc(host(s.url).slice(0, 1))}</span><span class="src__txt"><b>${esc(s.title)}</b><small>${esc(host(s.url))}${cited.has(s.url) ? ' · 인용됨' : ''}</small></span></a>`;
+    const open = S.openSources.has(m.id);
+    const shown = open ? list : list.slice(0, 4);
+    return `<div class="sources"><div class="sources__label">출처 ${list.length}개</div><div class="sources__list">${shown.map(item).join('')}</div>${list.length > 4 ? `<button class="sources__more" data-action="more-sources">${open ? '접기' : `${list.length - 4}개 더 보기`}</button>` : ''}</div>`;
   }
   function aiHTML(m) {
     const model = m.model && m.model !== 'demo' ? API.modelInfo(m.model).name : m.model === 'demo' ? '데모' : '';
@@ -364,6 +388,18 @@
     const tick = setInterval(() => { if (m.thinkStart && !m.content && !frame) frame = requestAnimationFrame(paint); }, 1000);
     try {
       for await (const ev of API.respond({ settings: st, messages: c.messages.slice(0, -1), signal: ctrl.signal })) {
+        if (ev.type === 'search') { (m.searches ||= []).push(ev.query); m.searchDone = false; if (!frame) frame = requestAnimationFrame(paint); }
+        if (ev.type === 'sources') {
+          m.searchDone = true;
+          const seen = new Set((m.sources ||= []).map((x) => x.url));
+          for (const it of ev.items) if (!seen.has(it.url)) { m.sources.push(it); seen.add(it.url); }
+          if (!frame) frame = requestAnimationFrame(paint);
+        }
+        if (ev.type === 'search_error') { m.searchDone = true; m.searchError = ev.code || 'unknown'; }
+        if (ev.type === 'cite') {
+          (m.cited ||= []).includes(ev.url) || m.cited.push(ev.url);
+          if (!(m.sources ||= []).some((x) => x.url === ev.url)) m.sources.push({ url: ev.url, title: ev.title });
+        }
         if (ev.type === 'thinking') { if (!m.thinkStart) m.thinkStart = Date.now(); m.thinking = (m.thinking || '') + ev.text; if (!frame) frame = requestAnimationFrame(paint); }
         if (ev.type === 'text') {
           if (m.thinkStart && !m.thinkMs) m.thinkMs = Date.now() - m.thinkStart;
@@ -382,7 +418,8 @@
     }
     cancelAnimationFrame(frame); clearInterval(tick);
     if (m.thinkStart && !m.thinkMs) m.thinkMs = Date.now() - m.thinkStart;
-    delete m.thinkStart;
+    delete m.thinkStart; delete m.searchDone;
+    if (m.searchError && !m.content && !m.error) m.error = '웹 검색을 하지 못했어요. 조직 설정에서 웹 검색이 켜져 있는지 확인해 주세요.';
     delete m.pending;
     S.busy = false; S.abort = null;
     body.classList.remove('is-busy'); syncInput();
@@ -465,6 +502,7 @@
       <label class="field"><span class="field__label">맞춤 지침 <small>모든 대화에 적용</small></span><textarea class="input" id="set-system" maxlength="4000" placeholder="예) 항상 존댓말로, 핵심부터 짧게 답해줘">${esc(st.system)}</textarea></label>
       <div class="field"><span class="field__label">화면 테마</span>${seg('theme', theme, st.theme)}</div>
       <div class="sheet__foot"><button type="button" class="btn" data-close-sheet>닫기</button><button class="btn btn--blue">저장하기</button></div>
+      <div class="field"><span class="field__label">데이터 <small>대화 ${Store.list().length}개</small></span><div class="data-btns"><button type="button" class="btn" data-backup>백업 받기</button><button type="button" class="btn" data-restore>백업 불러오기</button></div><p class="hint">백업 파일에는 API 키가 들어가지 않아요.</p><input type="file" accept="application/json,.json" data-restore-file hidden></div>
       <button type="button" class="danger-link" data-clear-all>모든 대화 삭제</button></form>`, { label: '설정' });
     box.addEventListener('click', async (e) => {
       const s = e.target.closest('[data-seg]');
@@ -474,12 +512,25 @@
         k.type = show ? 'text' : 'password'; e.target.textContent = show ? '숨기기' : '보기';
       }
       if (e.target.closest('[data-close-sheet]')) close();
+      if (e.target.closest('[data-backup]')) {
+        downloadFile(`moa-backup-${new Date().toISOString().slice(0, 10)}.json`, Store.backup(), 'application/json');
+        toast('백업 파일을 받았어요');
+      }
+      if (e.target.closest('[data-restore]')) $('[data-restore-file]', box).click();
       if (e.target.closest('[data-clear-all]')) {
         close();
         if (await confirmDialog({ title: '모든 대화를 삭제할까요?', text: '삭제한 대화는 되돌릴 수 없어요.', ok: '모두 삭제', danger: true })) {
           Store.clearAll(); newChat(); toast('모든 대화를 삭제했어요');
         }
       }
+    });
+    $('[data-restore-file]', box).addEventListener('change', async (e) => {
+      const f = e.target.files[0]; e.target.value = '';
+      if (!f) return;
+      try {
+        const n = Store.restore(await f.text());
+        close(); toast(n ? `대화 ${n}개를 불러왔어요` : '새로 불러올 대화가 없어요');
+      } catch (err) { toast(err.message); }
     });
     $('#settings-form', box).addEventListener('submit', (e) => {
       e.preventDefault();
@@ -511,11 +562,7 @@
       }
       if (b.dataset.m === 'pin') { Store.togglePin(id); toast(c.pinned ? '맨 위에 고정했어요' : '고정을 해제했어요'); }
       if (b.dataset.m === 'export') {
-        const blob = new Blob([Store.exportMarkdown(c)], { type: 'text/markdown;charset=utf-8' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob); a.download = `${(c.title || '대화').replace(/[\\/:*?"<>|]/g, '_')}.md`;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        downloadFile(`${c.title || '대화'}.md`, Store.exportMarkdown(c), 'text/markdown');
       }
       if (b.dataset.m === 'delete') {
         if (await confirmDialog({ title: '대화를 삭제할까요?', text: `“${c.title || '새 대화'}”을(를) 삭제하면 되돌릴 수 없어요.`, ok: '삭제', danger: true })) {
@@ -560,6 +607,13 @@
       case 'attach': el.file.click(); break;
       case 'detach': S.attachments.splice(+a.dataset.i, 1); renderAttachments(); syncInput(); break;
       case 'to-bottom': toBottom(true); break;
+      case 'toggle-search': {
+        const on = !Store.settings.webSearch;
+        Store.saveSettings({ webSearch: on });
+        toast(on ? '웹 검색을 켰어요. 필요할 때 최신 정보를 찾아봐요' : '웹 검색을 껐어요');
+        break;
+      }
+      case 'more-sources': if (msg) { S.openSources.has(msg.id) ? S.openSources.delete(msg.id) : S.openSources.add(msg.id); rerenderMsg(msg); } break;
       case 'panel-close': closePanel(); break;
       case 'panel-copy': if (S.panel) { toast((await copyText(S.panel.code)) ? '코드를 복사했어요' : '복사하지 못했어요'); } break;
       case 'copy-msg': if (msg) { const ok = await copyText(msg.content); a.innerHTML = ok ? I.check : I.copy; setTimeout(() => (a.innerHTML = I.copy), 1400); } break;
