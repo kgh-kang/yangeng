@@ -12,6 +12,8 @@ const fs = require('fs');
 const BASE = process.env.BASE_URL || 'http://localhost:8765/app/';
 const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.131.0/+esm';
 const SDK_BUNDLE = process.env.SDK_BUNDLE;
+const KATEX_URL = 'https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js';
+const KATEX_FILE = process.env.KATEX_FILE; // katex.min.js 로컬 경로 (없으면 수식은 원문 표시까지만 검사)
 const results = [];
 
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
@@ -402,6 +404,28 @@ const tests = {
     assert(!(await p.$('.msg--ai a[href^="javascript"]')), 'javascript 링크 없음');
     const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1'))[0]);
     assert(/^[A-Za-z0-9_-]+$/.test(saved.id), '안전한 id로 교체');
+  },
+  async '수식: 처음 나올 때만 KaTeX를 불러와 MathML로 그린다'(b) {
+    const ctx = await b.newContext({ viewport: { width: 1280, height: 820 } });
+    const p = await ctx.newPage();
+    p.errors = []; p.on('pageerror', (e) => p.errors.push(e.message));
+    await p.route(/fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net\/gh\//, (r) => r.abort());
+    let loads = 0;
+    await p.route(KATEX_URL, (r) => { loads++; return KATEX_FILE ? r.fulfill({ status: 200, contentType: 'application/javascript', body: fs.readFileSync(KATEX_FILE, 'utf8') }) : r.abort(); });
+    await p.goto(BASE);
+    await sendAndWait(p, '안녕');
+    assert(loads === 0, '수식이 없으면 KaTeX를 불러오지 않음');
+    await sendAndWait(p, '근의 공식 수식으로 알려줘');
+    if (KATEX_FILE) {
+      await p.waitForSelector('.msg--ai:last-child .math-block math[display="block"]');
+      assert((await p.$$('.msg--ai:last-child .md math')).length >= 5, '인라인 수식');
+      assert((await p.$$('.msg--ai:last-child table math')).length === 3, '표 안 수식');
+    } else {
+      assert(await p.isVisible('.math-src'), 'KaTeX가 없으면 원문 표시');
+    }
+    assert(loads === 1, `KaTeX 한 번만 요청 (${loads})`);
+    assert(!p.errors.length, p.errors.join());
+    await ctx.close();
   },
   async '모바일: 가로 넘침 없음 · 메뉴 서랍 열고 닫기'(b) {
     const p = await newPage(b, { viewport: { width: 390, height: 844 } });

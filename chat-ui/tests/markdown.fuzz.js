@@ -54,6 +54,16 @@ for (const [name, src] of Object.entries(SLOW)) {
 }
 if (highlight('const a = "x"; // c', 'js').indexOf('tk-k') < 0) fails.push(['강조', 'js', '키워드 없음']);
 
+// 수식 판별: 금액·인라인 코드 속 $는 수식이 아니고, $x$ · $$…$$ · \(…\) 는 수식
+const MATH_CASES = [
+  ['가격은 $5와 $10이에요', 0], ['$1,000 할인', 0], ['USD $5 to $7', 0], ['`$HOME` 경로', 0], ['돈 $ 기호', 0],
+  ['$x$와 $2x+1$', 2], ['$$\\frac{a}{b}$$', 1], ['\\(E=mc^2\\)', 1], ['$a$$b$', 2],
+];
+for (const [src, n] of MATH_CASES) {
+  const got = (render(src).match(/math-src/g) || []).length;
+  if (got !== n) fails.push(['수식 판별', src, `수식 ${got}개 (기대 ${n})`]);
+}
+
 fails.slice(0, 10).forEach((f) => console.log('✗', JSON.stringify(f).slice(0, 240)));
 console.log(fails.length ? `\n${fails.length}건 실패` : `✓ XSS ${PAYLOADS.length}개 + 무작위 20000개 + ReDoS ${Object.keys(SLOW).length}개 통과`);
 process.exit(fails.length ? 1 : 0);

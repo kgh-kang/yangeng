@@ -142,11 +142,36 @@
     return out + esc(code.slice(last));
   }
 
+  /* ---------- 수식: $…$, $$…$$, \(…\), \[…\] → KaTeX(MathML 출력, 별도 CSS 불필요) ---------- */
+  // 인라인 코드는 건너뛰고, "$5와 $10" 같은 금액은 수식으로 보지 않는다(닫는 $ 뒤에 숫자가 오면 제외).
+  const MATH = /(`[^`\n]+`)|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([^\n]+?)\\\)|\$(?![\s$])(?!\d[\d,.]*(?:[\s가-힣]|$))([^$`\n]{1,300}?)(?<!\s)\$(?!\d)/g;
+  let mathNeeded = null; // 앱이 등록: KaTeX가 아직 없을 때 불러오기
+  function mathHTML(tex, display) {
+    const k = window.katex;
+    if (k) {
+      try { return k.renderToString(tex, { displayMode: display, output: 'mathml', throwOnError: false, trust: false, maxSize: 50, maxExpand: 500 }); } catch (_) { /* 아래 원문 표시 */ }
+    } else if (mathNeeded) mathNeeded();
+    return `<code class="math-src${display ? ' is-block' : ''}">${esc(display ? `$$${tex}$$` : `$${tex}$`)}</code>`;
+  }
+  function withMath(text, fn) {
+    const found = [];
+    const marked = text.replace(MATH, (m, code, d1, d2, i1, i2) => {
+      if (code) return m;
+      const display = d1 != null || d2 != null;
+      found.push({ tex: (d1 ?? d2 ?? i1 ?? i2).trim(), display });
+      return `\u0001${found.length - 1}\u0002`;
+    });
+    if (!found.length) return fn(text);
+    return fn(marked)
+      .replace(/<p>\u0001(\d+)\u0002<\/p>/g, (_, i) => `<div class="math-block">${mathHTML(found[+i].tex, true)}</div>`)
+      .replace(/\u0001(\d+)\u0002/g, (_, i) => mathHTML(found[+i].tex, found[+i].display));
+  }
+
   function render(src) {
-    const parts = src.split(/^```/m);
+    const parts = src.replace(/[\u0001\u0002]/g, '').split(/^```/m);
     let html = '';
     parts.forEach((part, idx) => {
-      if (idx % 2 === 0) { html += blocks(part); return; }
+      if (idx % 2 === 0) { html += withMath(part, blocks); return; }
       const nl = part.indexOf('\n');
       // 언어 이름은 첫 단어만, 안전한 글자만 남긴다 (예: "```html title" → html)
       const lang = ((nl < 0 ? part : part.slice(0, nl)).trim().split(/\s+/)[0] || '').toLowerCase().replace(/[^a-z0-9+#._-]/g, '').slice(0, 20);
@@ -160,5 +185,5 @@
     return html;
   }
 
-  window.MoaMarkdown = { render, inline, esc, highlight };
+  window.MoaMarkdown = { render, inline, esc, highlight, hasMath: (s) => { MATH.lastIndex = 0; return [...s.matchAll(MATH)].some((m) => !m[1]); }, onMathNeeded(fn) { mathNeeded = fn; } };
 })();

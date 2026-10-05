@@ -108,6 +108,19 @@
     }
   }
 
+  /* ================= 수식: 답변에 수식이 처음 나올 때만 KaTeX를 불러온다 ================= */
+  const KATEX_URL = 'https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js';
+  let katexState = 'none';
+  MoaMarkdown.onMathNeeded(() => {
+    if (katexState !== 'none') return;
+    katexState = 'loading';
+    const sc = document.createElement('script');
+    sc.src = KATEX_URL; sc.async = true; sc.crossOrigin = 'anonymous';
+    sc.onload = () => { katexState = 'ready'; if (S.busy) S.rerenderAfter = true; else renderThread(); };
+    sc.onerror = () => { katexState = 'failed'; }; // 실패하면 수식 원문(코드 모양)으로 남는다
+    document.head.appendChild(sc);
+  });
+
   /* ================= 사이드바: 날짜별 대화 목록 ================= */
   function groupOf(c) {
     if (c.pinned) return '고정됨';
@@ -481,6 +494,7 @@
     body.classList.remove('is-busy'); syncInput();
     el.thread.removeAttribute('aria-busy');
     saveConv(undefined, c);
+    if (S.rerenderAfter && S.conv === c) { S.rerenderAfter = false; renderThread(); }
     if (S.conv === c) { const stick = nearBottom(); rerenderMsg(m); if (stick) toBottom(false); if (!m.error && !m.stopped) autoOpenArtifact(m); }
     renderSidebar();
   }

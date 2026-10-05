@@ -173,6 +173,11 @@ svg { flex: none; }
 .md a { color: var(--blue-text); text-decoration: none; font-weight: 500; }
 .md a:hover { text-decoration: underline; }
 .md code { font: 14px var(--mono); background: var(--fill); color: var(--blue-text); padding: 2px 6px; border-radius: 6px; }
+.math-block { overflow-x: auto; margin: 4px 0 14px; padding: 6px 0; }
+.math-block math { font-size: 1.12em; }
+.md math { font-size: 1.06em; }
+.math-src { color: var(--sub) !important; background: var(--fill) !important; }
+.math-src.is-block { display: block; padding: 10px 14px; white-space: pre-wrap; }
 .md blockquote { margin: 0 0 12px; padding: 10px 16px; background: var(--fill); border-radius: 14px; color: var(--sub); }
 .md blockquote p:last-child { margin: 0; }
 .md hr { border: 0; height: 1px; background: var(--line); margin: 20px 0; }
