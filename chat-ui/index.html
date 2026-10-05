@@ -45,6 +45,15 @@ a.v:hover { transform: translateY(-2px); border-color: var(--sub); }
 .t-c .mn b { height: 10px; width: 60%; background: #191f28; border-radius: 4px; }
 .t-c .mn i { height: 14px; border-radius: 5px; background: #f2f4f6; }
 .t-c .mn u { justify-self: end; height: 14px; width: 50%; background: var(--toss); border-radius: 7px 7px 2px 7px; margin-top: 6px; }
+.app-card { display: flex; align-items: center; gap: 18px; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; color: inherit; text-decoration: none; margin-bottom: 36px; transition: border-color .15s, transform .15s; }
+.app-card:hover { border-color: var(--toss); transform: translateY(-2px); }
+.app-card__icon { width: 60px; height: 60px; border-radius: 16px; background: #1b64da; display: grid; place-items: center; flex: none; }
+.app-card__txt { flex: 1; min-width: 0; }
+.app-card__txt b { display: block; font-size: 19px; margin: 2px 0 4px; }
+.app-card__txt > span:last-child { color: var(--sub); font-size: 14px; }
+.app-card__go { font-weight: 700; color: #1b64da; flex: none; }
+@media (max-width: 560px) { .app-card { flex-wrap: wrap; } .app-card__go { display: none; } }
+.sub { font-size: 16px; margin: 0 0 12px; color: var(--sub); }
 .note { margin-top: 32px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); font-size: 14px; color: var(--sub); }
 .note code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--fg); }
 </style>
@@ -52,7 +61,13 @@ a.v:hover { transform: translateY(-2px); border-color: var(--sub); }
 <body>
 <div class="wrap">
   <h1>모아 채팅 UI 시안</h1>
-  <p class="lead">채팅형 AI 서비스의 HTML 껍데기 시안 3종입니다. 세 시안 모두 같은 <code>chat-shell.js</code>로 전송, 스트리밍 응답, 새 대화, 사이드바, 모델 선택, 라이트/다크 전환이 동작합니다.</p>
+  <p class="lead">채팅형 AI 서비스 "모아" 작업물이에요. 위의 완성 앱을 먼저 써 보세요. 아래는 처음 만든 HTML 껍데기 시안 3종입니다. 세 시안 모두 같은 <code>chat-shell.js</code>로 전송, 스트리밍 응답, 새 대화, 사이드바, 모델 선택, 라이트/다크 전환이 동작합니다.</p>
+  <a class="app-card" href="app/">
+    <span class="app-card__icon"><svg width="30" height="30" viewBox="0 0 512 512"><path d="M256 118c-84 0-152 56-152 126 0 41 23 77 59 100l-13 52c-2 8 7 14 14 10l62-36c10 1 20 2 30 2 84 0 152-56 152-128S340 118 256 118z" fill="#fff"/></svg></span>
+    <span class="app-card__txt"><span class="tag">완성 제품</span><b>모아 앱 열기</b><span>시안 C를 바탕으로 만든 실제 동작하는 채팅 앱이에요. 대화 저장·검색, 웹 검색, 이미지 첨부, 결과물 미리보기(버전), 음성 입력, 백업을 지원해요. API 키가 없으면 데모 모드로 동작해요.</span></span>
+    <span class="app-card__go">열기 →</span>
+  </a>
+  <h2 class="sub">초기 시안</h2>
   <div class="grid">
     <a class="v" href="a-classic.html">
       <div class="thumb t-a"><div class="s"></div><div class="m"><div class="g"></div><div class="c"></div></div></div>
