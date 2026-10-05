@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>모아 채팅 UI 시안</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #f6f5f1; --card: #fff; --line: #e4e1d8; --fg: #1d1c1a; --sub: #6a675f; --a: #c6613f; --toss: #3182f6; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #1c1c1b; --card: #252524; --line: #35342f; --fg: #eeece4; --sub: #a9a69c; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #1c1c1b; --card: #252524; --line: #35342f; --fg: #eeece4; --sub: #a9a69c; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 "Noto Sans KR", system-ui, sans-serif; padding: 48px 16px; }
+.wrap { max-width: 980px; margin: 0 auto; }
+h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.02em; }
+.lead { color: var(--sub); margin: 0 0 28px; max-width: 62ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
+a.v { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; color: inherit; text-decoration: none; transition: transform .15s, border-color .15s; }
+a.v:hover { transform: translateY(-2px); border-color: var(--sub); }
+.thumb { aspect-ratio: 16 / 10; max-width: 100%; display: grid; padding: 12px; gap: 8px; }
+.v__txt { padding: 14px 16px 18px; border-top: 1px solid var(--line); }
+.v__txt b { display: block; font-size: 16px; }
+.v__txt span { color: var(--sub); font-size: 13.5px; }
+.tag { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--sub); }
+/* 미니 썸네일 */
+.t-a { background: #faf9f5; grid-template-columns: 22% 1fr; }
+.t-a .s { background: #f0eee6; border-radius: 6px; }
+.t-a .m { display: grid; place-items: center; align-content: center; gap: 8px; }
+.t-a .g { width: 55%; height: 10px; border-radius: 5px; background: #d7d2c2; }
+.t-a .c { width: 78%; height: 34px; border-radius: 10px; background: #fff; border: 1px solid #e6e3d8; position: relative; }
+.t-a .c::after { content: ""; position: absolute; right: 6px; bottom: 6px; width: 12px; height: 12px; border-radius: 3px; background: var(--a); }
+.t-b { background: #1c1c1b; grid-template-columns: 7% 1fr 1.1fr; }
+.t-b .r { background: #161615; border-radius: 4px; }
+.t-b .ch { display: grid; align-content: end; gap: 6px; }
+.t-b .ch i { height: 8px; border-radius: 4px; background: #34332f; }
+.t-b .ch i:nth-child(2) { width: 60%; background: #df8361; }
+.t-b .p { background: #252524; border-radius: 6px; display: flex; align-items: end; gap: 5px; padding: 10px; }
+.t-b .p i { flex: 1; background: #3a3934; border-radius: 3px; }
+.t-b .p i:last-child { background: #df8361; }
+.t-c { background: #f2f4f6; grid-template-columns: 30% 1fr; }
+.t-c .sd { display: grid; gap: 6px; align-content: start; }
+.t-c .sd i { height: 18px; border-radius: 6px; background: #fff; }
+.t-c .sd i:first-child { background: var(--toss); }
+.t-c .mn { background: #fff; border-radius: 10px; padding: 12px; display: grid; gap: 6px; align-content: start; }
+.t-c .mn b { height: 10px; width: 60%; background: #191f28; border-radius: 4px; }
+.t-c .mn i { height: 14px; border-radius: 5px; background: #f2f4f6; }
+.t-c .mn u { justify-self: end; height: 14px; width: 50%; background: var(--toss); border-radius: 7px 7px 2px 7px; margin-top: 6px; }
+.note { margin-top: 32px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); font-size: 14px; color: var(--sub); }
+.note code { font-family: ui-monospace, Menlo, monospace; font-size: 13px; color: var(--fg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>모아 채팅 UI 시안</h1>
+  <p class="lead">채팅형 AI 서비스의 HTML 껍데기 시안 3종입니다. 세 시안 모두 같은 <code>chat-shell.js</code>로 전송, 스트리밍 응답, 새 대화, 사이드바, 모델 선택, 라이트/다크 전환이 동작합니다.</p>
+  <div class="grid">
+    <a class="v" href="a-classic.html">
+      <div class="thumb t-a"><div class="s"></div><div class="m"><div class="g"></div><div class="c"></div></div></div>
+      <div class="v__txt"><div class="tag">시안 A</div><b>클래식</b><span>따뜻한 종이 톤과 세리프 인사말. 빈 화면에선 입력창이 가운데, 대화가 시작되면 아래로 내려갑니다.</span></div>
+    </a>
+    <a class="v" href="b-studio.html">
+      <div class="thumb t-b"><div class="r"></div><div class="ch"><i></i><i></i><i></i></div><div class="p"><i style="height:50%"></i><i style="height:70%"></i><i style="height:60%"></i><i style="height:85%"></i></div></div>
+      <div class="v__txt"><div class="tag">시안 B</div><b>스튜디오</b><span>아이콘 레일 + 대화 + 오른쪽 아티팩트 패널. 결과물을 미리보기/코드로 나란히 확인하는 작업형 레이아웃입니다.</span></div>
+    </a>
+    <a class="v" href="c-toss.html">
+      <div class="thumb t-c"><div class="sd"><i></i><i></i><i></i><i></i></div><div class="mn"><b></b><i></i><i></i><i></i><u></u></div></div>
+      <div class="v__txt"><div class="tag">시안 C</div><b>토스 결합</b><span>회색 바탕 위 흰 시트, 굵은 왼쪽 정렬 헤드라인, 컬러 타일 리스트, 파란 말풍선과 바텀시트 모델 선택.</span></div>
+    </a>
+  </div>
+  <div class="note">실제 API 연결: <code>ChatShell.setResponder(async function* (text, history) { … yield 토큰; })</code> 로 데모 응답기를 교체하세요.</div>
+</div>
+</body>
+</html>
