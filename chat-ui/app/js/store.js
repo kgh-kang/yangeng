@@ -18,6 +18,40 @@
     }
     return list;
   }
+  /* ---------- 백업 파일은 외부 입력: 알려진 필드만, 정해진 형식으로만 받는다 ---------- */
+  const ID = /^[A-Za-z0-9_-]{1,64}$/;
+  const B64 = /^[A-Za-z0-9+/=]*$/;
+  const MEDIA = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain'];
+  const str = (v, max = 1e6) => (typeof v === 'string' ? v.slice(0, max) : '');
+  const num = (v) => (Number.isFinite(+v) && +v >= 0 ? +v : 0);
+  function sanitizeFile(f) {
+    if (!f || !['image', 'pdf', 'text'].includes(f.kind)) return null;
+    const mediaType = MEDIA.includes(f.mediaType) ? f.mediaType : f.kind === 'pdf' ? 'application/pdf' : f.kind === 'text' ? 'text/plain' : 'image/png';
+    const data = typeof f.data === 'string' && B64.test(f.data) ? f.data : '';
+    return { kind: f.kind, name: str(f.name, 200) || '파일', mediaType, data, text: f.kind === 'text' ? str(f.text) : '', size: num(f.size), dropped: !!f.dropped };
+  }
+  function sanitizeMessage(m) {
+    const out = { id: ID.test(m.id) ? m.id : uid(), role: m.role, content: str(m.content), at: num(m.at) || undefined };
+    if (m.role === 'user') { out.files = (Array.isArray(m.files) ? m.files : []).map(sanitizeFile).filter(Boolean); return out; }
+    Object.assign(out, {
+      model: str(m.model, 80), thinking: str(m.thinking) || undefined, thinkMs: num(m.thinkMs) || undefined,
+      error: str(m.error, 500) || undefined, fix: ['settings', 'model'].includes(m.fix) ? m.fix : undefined,
+      stopped: !!m.stopped || undefined, truncated: !!m.truncated || undefined,
+      feedback: ['up', 'down'].includes(m.feedback) ? m.feedback : undefined,
+      searches: Array.isArray(m.searches) ? m.searches.map((q) => str(q, 200)) : undefined,
+      sources: Array.isArray(m.sources) ? m.sources.filter((x) => x && /^https?:\/\//i.test(x.url)).map((x) => ({ url: str(x.url, 2000), title: str(x.title, 300) || str(x.url, 300) })) : undefined,
+      cited: Array.isArray(m.cited) ? m.cited.map((u) => str(u, 2000)) : undefined,
+      usage: m.usage && typeof m.usage === 'object' ? { input: num(m.usage.input), cached: num(m.usage.cached), output: num(m.usage.output), searches: num(m.usage.searches), cost: num(m.usage.cost) } : undefined,
+    });
+    return out;
+  }
+  function sanitizeConv(c) {
+    return {
+      id: ID.test(c.id) ? c.id : uid(), title: str(c.title, 80), createdAt: num(c.createdAt) || Date.now(), updatedAt: num(c.updatedAt) || Date.now(), pinned: !!c.pinned,
+      messages: c.messages.filter((m) => m && (m.role === 'user' || m.role === 'assistant')).map(sanitizeMessage),
+    };
+  }
+
   let convs = migrate(read(K_CONVS, []));
   /** rememberKey가 꺼져 있으면 API 키는 이 탭(sessionStorage)에만 둔다 */
   function loadSettings() {
@@ -98,11 +132,8 @@
       migrate(data.conversations.filter((c) => c && Array.isArray(c.messages)));
       let n = 0;
       for (const c of data.conversations) {
-        if (!c || typeof c.id !== 'string' || !Array.isArray(c.messages)) continue;
-        const clean = {
-          id: c.id, title: String(c.title || ''), createdAt: +c.createdAt || Date.now(), updatedAt: +c.updatedAt || Date.now(), pinned: !!c.pinned,
-          messages: c.messages.filter((m) => m && (m.role === 'user' || m.role === 'assistant')).map((m) => ({ ...m, id: String(m.id || uid()), content: String(m.content || ''), pending: undefined })),
-        };
+        if (!c || !Array.isArray(c.messages)) continue;
+        const clean = sanitizeConv(c);
         removed.delete(clean.id);
         const i = convs.findIndex((x) => x.id === clean.id);
         if (i < 0) { convs.push(clean); n++; } else if (clean.updatedAt > convs[i].updatedAt) { convs[i] = clean; n++; }

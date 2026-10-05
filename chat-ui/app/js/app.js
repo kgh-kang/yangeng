@@ -131,7 +131,7 @@
     el.recent.querySelector('.rows').innerHTML = list.map((c) => {
       const last = [...c.messages].reverse().find((m) => m.role === 'assistant' && m.content);
       const snippet = last ? last.content.replace(/```[\s\S]*?```/g, '[코드]').replace(/[#*_>`|-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) : '';
-      return `<button class="row" data-action="open" data-id="${c.id}"><span class="tile" style="background:var(--fill)">💬</span><span><b>${esc(c.title || '새 대화')}</b><small>${esc(snippet || groupOf(c))}</small></span><svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>`;
+      return `<button class="row" data-action="open" data-id="${esc(c.id)}"><span class="tile" style="background:var(--fill)">💬</span><span><b>${esc(c.title || '새 대화')}</b><small>${esc(snippet || groupOf(c))}</small></span><svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>`;
     }).join('');
   }
   function renderSidebar() {
@@ -146,7 +146,7 @@
       const g = groupOf(c);
       if (g !== last) { html += `<div class="group">${g}</div>`; last = g; }
       const active = S.conv && S.conv.id === c.id;
-      html += `<div class="conv${active ? ' is-active' : ''}" data-id="${c.id}"><button class="conv__link" data-action="open" data-id="${c.id}"${active ? ' aria-current="page"' : ''}>${c.pinned ? '<span class="conv__pin" aria-label="고정됨">●</span>' : ''}<span>${esc(c.title || '새 대화')}</span></button><button class="icon-btn icon-btn--sm conv__more" data-action="conv-more" data-id="${c.id}" aria-label="${esc(c.title || '새 대화')} 메뉴">${I.more}</button></div>`;
+      html += `<div class="conv${active ? ' is-active' : ''}" data-id="${esc(c.id)}"><button class="conv__link" data-action="open" data-id="${esc(c.id)}"${active ? ' aria-current="page"' : ''}>${c.pinned ? '<span class="conv__pin" aria-label="고정됨">●</span>' : ''}<span>${esc(c.title || '새 대화')}</span></button><button class="icon-btn icon-btn--sm conv__more" data-action="conv-more" data-id="${esc(c.id)}" aria-label="${esc(c.title || '새 대화')} 메뉴">${I.more}</button></div>`;
     }
     el.convs.innerHTML = html;
   }
@@ -175,7 +175,7 @@
     const pics = files.filter((f) => f.kind === 'image');
     const docs = files.filter((f) => f.kind !== 'image');
     const imgs = (pics.length
-      ? `<div class="imgs">${pics.map((i) => (i.data ? `<img src="data:${i.mediaType};base64,${i.data}" alt="${esc(i.name || '첨부 이미지')}" loading="lazy">` : '<div class="gone">저장 공간이 부족해 이미지를 지웠어요</div>')).join('')}</div>`
+      ? `<div class="imgs">${pics.map((i) => (i.data ? `<img src="data:${esc(i.mediaType)};base64,${esc(i.data)}" alt="${esc(i.name || '첨부 이미지')}" loading="lazy">` : '<div class="gone">저장 공간이 부족해 이미지를 지웠어요</div>')).join('')}</div>`
       : '') + (docs.length ? `<div class="fchips">${docs.map((f) => fileChip(f)).join('')}</div>` : '');
     if (S.editing === m.id) {
       return `${imgs}<form class="edit" data-edit-form="${m.id}"><label class="sr-only" for="edit-${m.id}">메시지 수정</label><textarea id="edit-${m.id}">${esc(m.content)}</textarea><div class="edit__btns"><button type="button" class="btn" data-action="edit-cancel">취소</button><button class="btn btn--blue">보내기</button></div></form>`;
@@ -243,7 +243,7 @@
     if (ta) { autosize(ta); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
   }
   function rerenderMsg(m) {
-    const old = el.thread.querySelector(`.msg[data-id="${m.id}"]`);
+    const old = el.thread.querySelector(`.msg[data-id="${CSS.escape(m.id)}"]`);
     if (old) old.replaceWith(msgNode(m));
   }
 
@@ -370,7 +370,7 @@
   function renderAttachments() {
     el.attachList.hidden = !S.attachments.length;
     el.attachList.innerHTML = S.attachments.map((a, i) => (a.kind === 'image'
-      ? `<div class="attach"><img src="data:${a.mediaType};base64,${a.data}" alt="${esc(a.name)}"><button type="button" data-action="detach" data-i="${i}" aria-label="${esc(a.name)} 빼기">${I.x}</button></div>`
+      ? `<div class="attach"><img src="data:${esc(a.mediaType)};base64,${esc(a.data)}" alt="${esc(a.name)}"><button type="button" data-action="detach" data-i="${i}" aria-label="${esc(a.name)} 빼기">${I.x}</button></div>`
       : fileChip(a, i))).join('');
   }
   function clearAttachments() { S.attachments = []; renderAttachments(); }
@@ -434,7 +434,7 @@
     const paint = () => {
       frame = 0;
       if (S.conv !== c) return;
-      const node = el.thread.querySelector(`.msg[data-id="${m.id}"] .ai__body`);
+      const node = el.thread.querySelector(`.msg[data-id="${CSS.escape(m.id)}"] .ai__body`);
       if (!node) return;
       const stick = nearBottom();
       node.innerHTML = aiBodyHTML(m);

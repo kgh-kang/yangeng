@@ -88,18 +88,42 @@
   };
   const LANG = { js: 'js', javascript: 'js', ts: 'js', typescript: 'js', jsx: 'js', tsx: 'js', json: 'js', py: 'py', python: 'py', css: 'css', scss: 'css', sql: 'sql', sh: 'sh', bash: 'sh', shell: 'sh', zsh: 'sh', java: 'java', go: 'java', rust: 'java', rs: 'java', kotlin: 'java', c: 'java', cpp: 'java', 'c++': 'java', cs: 'java', swift: 'java' };
   const span = (cls, t) => `<span class="tk-${cls}">${esc(t)}</span>`;
+  /** HTML/XML 강조. 한 덩어리 정규식은 닫히지 않은 긴 태그에서 지수적으로 느려지므로(ReDoS)
+   *  sticky 정규식으로 앞에서부터 한 번씩만 읽는 선형 스캐너로 처리한다. */
+  function highlightMarkup(code) {
+    const TAG = /<(\/?)([\w:-]+)/y, ATTR = /(\s+)([\w:@.-]+)(?:(\s*=\s*)("[^"]*"|'[^']*'|[^\s>]+))?/y, END = /\s*\/?>/y;
+    let out = '', i = 0;
+    while (i < code.length) {
+      const lt = code.indexOf('<', i);
+      if (lt < 0) { out += esc(code.slice(i)); break; }
+      out += esc(code.slice(i, lt));
+      if (code.startsWith('<!--', lt)) {
+        const endC = code.indexOf('-->', lt + 4);
+        const stop = endC < 0 ? code.length : endC + 3;
+        out += span('c', code.slice(lt, stop)); i = stop; continue;
+      }
+      TAG.lastIndex = lt;
+      const t = TAG.exec(code);
+      if (!t) { out += '&lt;'; i = lt + 1; continue; }
+      out += esc('<' + t[1]) + span('t', t[2]);
+      i = TAG.lastIndex;
+      for (;;) {
+        ATTR.lastIndex = i;
+        const a = ATTR.exec(code);
+        if (!a) break;
+        out += esc(a[1]) + span('a', a[2]) + (a[3] ? esc(a[3]) + span('s', a[4]) : '');
+        i = ATTR.lastIndex;
+      }
+      END.lastIndex = i;
+      const e = END.exec(code);
+      if (e) { out += esc(e[0]); i = END.lastIndex; }
+    }
+    return out;
+  }
+
   function highlight(code, lang) {
     if (code.length > 60000) return esc(code);
-    if (lang === 'html' || lang === 'xml' || lang === 'svg' || lang === 'vue') {
-      return code.replace(/(<!--[\s\S]*?-->)|(<\/?)([\w:-]+)((?:\s+[\w:@.-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?>)|([^<]+|<)/g, (m, cm, open, tag, attrs, close, text) => {
-        if (cm) return span('c', cm);
-        if (tag) {
-          const a = (attrs || '').replace(/([\w:@.-]+)(\s*=\s*)?("[^"]*"|'[^']*'|[^\s>]+)?/g, (x, n, eq, v) => span('a', n) + (eq ? esc(eq) : '') + (v ? span('s', v) : ''));
-          return esc(open) + span('t', tag) + a + esc(close);
-        }
-        return esc(text || m);
-      });
-    }
+    if (lang === 'html' || lang === 'xml' || lang === 'svg' || lang === 'vue') return highlightMarkup(code);
     const fam = LANG[lang];
     if (!fam) return esc(code);
     const kw = KW[fam];
@@ -124,7 +148,8 @@
     parts.forEach((part, idx) => {
       if (idx % 2 === 0) { html += blocks(part); return; }
       const nl = part.indexOf('\n');
-      const lang = (nl < 0 ? part : part.slice(0, nl)).trim().toLowerCase();
+      // 언어 이름은 첫 단어만, 안전한 글자만 남긴다 (예: "```html title" → html)
+      const lang = ((nl < 0 ? part : part.slice(0, nl)).trim().split(/\s+/)[0] || '').toLowerCase().replace(/[^a-z0-9+#._-]/g, '').slice(0, 20);
       const code = nl < 0 ? '' : part.slice(nl + 1).replace(/\n$/, '');
       const open = idx === parts.length - 1; // 아직 닫히지 않은 펜스(스트리밍 중)
       const canPreview = PREVIEWABLE.has(lang) && !open;

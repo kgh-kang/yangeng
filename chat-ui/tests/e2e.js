@@ -357,13 +357,16 @@ const tests = {
   },
   async '단축키 도움말(?)과 키 기억하지 않기'(b) {
     const p = await newPage(b);
-    await p.click('#scroll', { force: true }).catch(() => {});
     await p.evaluate(() => document.activeElement.blur());
     await p.keyboard.press('?');
     assert(await p.isVisible('.keys'), '단축키 창');
     await p.keyboard.press('Escape');
+    await p.waitForSelector('.keys', { state: 'detached' });
     await p.click('.me');
+    await p.waitForSelector('#set-key');
+    await p.waitForTimeout(100); // 시트가 첫 입력칸에 포커스를 주는 타이머가 끝난 뒤 입력
     await p.fill('#set-key', 'sk-ant-temp');
+    assert((await p.inputValue('#set-key')) === 'sk-ant-temp', '키 입력');
     await p.uncheck('#set-remember');
     await p.click('#settings-form .btn--blue');
     const stored = await p.evaluate(() => [JSON.parse(localStorage.getItem('moa.settings.v1')).apiKey, sessionStorage.getItem('moa.key.session.v1')]);
@@ -371,6 +374,34 @@ const tests = {
     assert((await p.textContent('#me-plan')) === 'Claude 연결됨', '연결 표시');
     await p.reload();
     assert((await p.textContent('#me-plan')) === 'Claude 연결됨', '같은 탭 새로고침은 유지');
+  },
+  async '보안: 악의적인 백업 파일을 불러와도 스크립트가 실행되지 않는다'(b) {
+    const p = await newPage(b);
+    const evil = {
+      app: 'moa', version: 1, conversations: [{
+        id: 'x" onmouseover="window.__pwned=1" a="', title: '<img src=x onerror="window.__pwned=2">', createdAt: 1, updatedAt: Date.now(),
+        messages: [
+          { id: 'm" onclick="window.__pwned=3', role: 'user', content: '<script>window.__pwned=4</script>', files: [{ kind: 'image', name: 'a', mediaType: 'image/png" onerror="window.__pwned=5', data: 'AAA" onerror="window.__pwned=6' }] },
+          { id: 'a1', role: 'assistant', content: '[x](javascript:window.__pwned=7)', model: '<b onclick=1>', usage: { input: '<img src=x onerror="window.__pwned=8">', output: 1, cost: 'x' },
+            sources: [{ url: 'javascript:window.__pwned=9', title: 't' }, { url: 'https://ok.example', title: '<img src=x onerror="window.__pwned=10">' }] },
+          { id: 'z', role: 'system', content: 'ignored' },
+        ],
+      }],
+    };
+    await p.click('.me');
+    await p.setInputFiles('[data-restore-file]', { name: 'evil.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(evil)) });
+    await p.waitForSelector('.conv');
+    await p.hover('.conv');
+    await p.click('.conv__link');
+    await p.hover('.msg--user');
+    await p.waitForTimeout(300);
+    assert(!(await p.evaluate(() => window.__pwned)), `스크립트 실행됨: ${await p.evaluate(() => window.__pwned)}`);
+    assert(!p.errors.length, p.errors.join());
+    assert((await p.$$('.msg')).length === 2, 'system 역할 메시지는 버림');
+    assert((await p.$$('.src')).length === 1, 'javascript: 출처는 버림');
+    assert(!(await p.$('.msg--ai a[href^="javascript"]')), 'javascript 링크 없음');
+    const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1'))[0]);
+    assert(/^[A-Za-z0-9_-]+$/.test(saved.id), '안전한 id로 교체');
   },
   async '모바일: 가로 넘침 없음 · 메뉴 서랍 열고 닫기'(b) {
     const p = await newPage(b, { viewport: { width: 390, height: 844 } });
