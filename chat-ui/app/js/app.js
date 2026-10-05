@@ -50,7 +50,7 @@
     lastFocus = document.activeElement;
     const wrap = document.createElement('div');
     const ov = kind === 'menu' ? '<div class="overlay" style="background:transparent" data-close></div>' : '<div class="overlay" data-close></div>';
-    wrap.innerHTML = ov + `<div class="${kind}" role="${kind === 'menu' ? 'menu' : 'dialog'}" aria-modal="true" ${label ? `aria-label="${esc(label)}"` : ''} tabindex="-1">${kind === 'sheet' ? '<div class="sheet__grip"></div>' : ''}${html}</div>`;
+    wrap.innerHTML = ov + `<div class="${kind}" role="${kind === 'menu' ? 'menu' : 'dialog'}" ${kind === 'menu' ? '' : 'aria-modal="true"'} ${label ? `aria-label="${esc(label)}"` : ''} tabindex="-1">${kind === 'sheet' ? '<div class="sheet__grip"></div>' : ''}${html}</div>`;
     el.layer.appendChild(wrap);
     const box = wrap.lastElementChild;
     if (kind === 'menu' && anchor) {
@@ -161,10 +161,17 @@
     const acts = `<div class="actions"><button data-action="copy-msg" aria-label="복사" title="복사">${I.copy}</button><button data-action="edit-msg" aria-label="수정" title="수정">${I.edit}</button></div>`;
     return `${imgs}<div class="user-row">${acts}${m.content ? `<div class="bubble">${esc(m.content)}</div>` : ''}</div>`;
   }
+  const secs = (ms) => Math.max(1, Math.round(ms / 1000));
   function aiBodyHTML(m) {
     let h = '';
+    if (m.pending && !m.content && m.thinkStart) {
+      h += `<div class="think-live" aria-live="off"><span class="think-live__dot"></span>생각하는 중 · ${secs(Date.now() - m.thinkStart)}초</div>`;
+      if (m.thinking) h += `<div class="think-live__text">${esc(m.thinking.slice(-160))}</div>`;
+    } else if (m.thinking) {
+      h += `<details class="think"><summary>생각 과정${m.thinkMs ? ` · ${secs(m.thinkMs)}초` : ''}</summary><div class="think__body md">${md(m.thinking)}</div></details>`;
+    }
     if (m.content) h += `<div class="md${m.pending ? ' caret' : ''}">${md(m.content)}</div>`;
-    else if (m.pending) h += '<span class="typing" aria-label="답변 작성 중"><i></i><i></i><i></i></span>';
+    else if (m.pending && !m.thinkStart) h += '<span class="typing" aria-label="답변 작성 중"><i></i><i></i><i></i></span>';
     if (m.stopped) h += '<div class="note">답변을 중간에 멈췄어요.</div>';
     if (m.truncated) h += '<div class="note">답변이 너무 길어서 여기까지만 받았어요. “이어서 써줘”라고 보내 보세요.</div>';
     if (m.error) {
@@ -176,7 +183,7 @@
   function aiHTML(m) {
     const model = m.model && m.model !== 'demo' ? API.modelInfo(m.model).name : m.model === 'demo' ? '데모' : '';
     const actions = m.pending ? '' : `<div class="actions">${m.content ? `<button data-action="copy-msg" aria-label="복사" title="복사">${I.copy}</button>` : ''}<button data-action="retry" aria-label="다시 생성" title="다시 생성">${I.retry}</button>${m.content ? `<button data-action="feedback" data-v="up" aria-label="좋아요" aria-pressed="${m.feedback === 'up'}">${I.up}</button><button data-action="feedback" data-v="down" aria-label="별로예요" aria-pressed="${m.feedback === 'down'}">${I.down}</button>` : ''}</div>`;
-    return `<div class="ai__head"><i class="logo">모</i>모아${model ? ` <small>· ${esc(model)}</small>` : ''}</div><div class="ai__body">${aiBodyHTML(m)}</div>${actions}`;
+    return `<h2 class="ai__head"><i class="logo" aria-hidden="true">모</i>모아${model ? ` <small>· ${esc(model)}</small>` : ''}<span class="sr-only">의 답변</span></h2><div class="ai__body">${aiBodyHTML(m)}</div>${actions}`;
   }
   function msgNode(m) {
     const n = document.createElement('div');
@@ -354,9 +361,14 @@
       node.innerHTML = aiBodyHTML(m);
       if (stick) toBottom(false);
     };
+    const tick = setInterval(() => { if (m.thinkStart && !m.content && !frame) frame = requestAnimationFrame(paint); }, 1000);
     try {
       for await (const ev of API.respond({ settings: st, messages: c.messages.slice(0, -1), signal: ctrl.signal })) {
-        if (ev.type === 'text') { m.content += ev.text; if (!frame) frame = requestAnimationFrame(paint); }
+        if (ev.type === 'thinking') { if (!m.thinkStart) m.thinkStart = Date.now(); m.thinking = (m.thinking || '') + ev.text; if (!frame) frame = requestAnimationFrame(paint); }
+        if (ev.type === 'text') {
+          if (m.thinkStart && !m.thinkMs) m.thinkMs = Date.now() - m.thinkStart;
+          m.content += ev.text; if (!frame) frame = requestAnimationFrame(paint);
+        }
         if (ev.type === 'done') {
           if (ev.model && ev.model !== 'demo') m.model = ev.model;
           if (ev.stopReason === 'refusal') m.error = '이 요청에는 답변할 수 없어요. 질문을 바꿔서 다시 물어봐 주세요.';
@@ -368,7 +380,9 @@
       if (f.aborted) m.stopped = true;
       else { m.error = f.message; if (f.fix) m.fix = f.fix; }
     }
-    cancelAnimationFrame(frame);
+    cancelAnimationFrame(frame); clearInterval(tick);
+    if (m.thinkStart && !m.thinkMs) m.thinkMs = Date.now() - m.thinkStart;
+    delete m.thinkStart;
     delete m.pending;
     S.busy = false; S.abort = null;
     body.classList.remove('is-busy'); syncInput();
@@ -429,7 +443,7 @@
     const st = Store.settings;
     const live = API.isLive(st);
     const { box, close } = openLayer('sheet', `<h2>어떤 모아와 대화할까요?</h2><p class="sheet__lead">${live ? '언제든 바꿀 수 있어요' : '데모 모드에서는 모델과 상관없이 준비된 답변이 나와요'}</p>` +
-      API.MODELS.map((m, i) => `<button class="opt" role="menuitemradio" data-model="${m.id}" aria-checked="${m.id === st.model}"><span class="tile" style="background:${['var(--t-purple)', 'var(--blue-weak)', 'var(--t-green)'][i]}">${['🧠', '⚡️', '🍃'][i]}</span><span><b>${esc(m.name)}</b><small>${esc(m.desc)}</small></span><span class="radio"></span></button>`).join(''), { label: '모델 선택' });
+      '<div role="radiogroup" aria-label="모델">' + API.MODELS.map((m, i) => `<button class="opt" role="radio" data-model="${m.id}" aria-checked="${m.id === st.model}"><span class="tile" style="background:${['var(--t-purple)', 'var(--blue-weak)', 'var(--t-green)'][i]}">${['🧠', '⚡️', '🍃'][i]}</span><span><b>${esc(m.name)}</b><small>${esc(m.desc)}</small></span><span class="radio"></span></button>`).join('') + '</div>', { label: '모델 선택' });
     box.addEventListener('click', (e) => {
       const o = e.target.closest('[data-model]'); if (!o) return;
       Store.saveSettings({ model: o.dataset.model });
@@ -587,8 +601,8 @@
     if (e.key === 'Enter') { const first = $('.conv__link', el.convs); if (first) first.click(); }
     if (e.key === 'Escape') { el.search.value = ''; S.query = ''; renderSidebar(); el.input.focus(); }
   });
-  $('.cta kbd') || $('.cta').insertAdjacentHTML('beforeend', `<kbd class="desktop-only">${isMac ? '⌘⇧O' : 'Ctrl⇧O'}</kbd>`);
-  el.search.placeholder = `대화 검색  (${isMac ? '⌘' : 'Ctrl'} K)`;
+  $('.cta').title = `새 대화 (${isMac ? '⌘' : 'Ctrl'}+Shift+O)`;
+  el.search.placeholder = matchMedia('(pointer: fine)').matches ? `대화 검색  (${isMac ? '⌘' : 'Ctrl'} K)` : '대화 검색';
 
   Store.on((what) => { if (what === 'settings') renderChrome(); if (what === 'convs') renderSidebar(); });
   window.addEventListener('storage', (e) => { if (e.key && e.key.startsWith('moa.')) location.reload(); });

@@ -60,7 +60,13 @@
     const info = modelInfo(settings.model);
     const params = { model: info.id, max_tokens: 64000, messages: toApiMessages(messages) };
     if (settings.system && settings.system.trim()) params.system = settings.system.trim();
-    if (info.effort) params.output_config = { effort: settings.effort || 'medium' };
+    if (info.effort) {
+      params.output_config = { effort: settings.effort || 'medium' };
+      // 생각 과정 요약을 받아 "생각하는 중" 화면에 보여준다 (기본값은 빈 문자열이라 명시해야 함)
+      params.thinking = { type: 'adaptive', display: 'summarized' };
+    }
+    // 대화가 길어질수록 앞부분을 캐시해 비용·지연을 줄인다
+    params.cache_control = { type: 'ephemeral' };
     // 안전 분류기에 걸려 거절되면 서버가 다른 모델로 이어서 답하도록 기본 폴백을 켠다.
     if (info.fallbacks) { params.betas = ['server-side-fallback-2026-07-01']; params.fallbacks = 'default'; }
 
@@ -68,6 +74,7 @@
     try {
       for await (const ev of stream) {
         if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') yield { type: 'text', text: ev.delta.text };
+        if (ev.type === 'content_block_delta' && ev.delta.type === 'thinking_delta') yield { type: 'thinking', text: ev.delta.thinking };
       }
       const final = await stream.finalMessage();
       yield { type: 'done', stopReason: final.stop_reason, model: final.model, usage: final.usage };
@@ -95,7 +102,12 @@
     const hasImg = last && (last.images || []).length;
     const reply = hasImg ? `이미지 ${last.images.length}장을 받았어요. API 키를 연결하면 Claude가 이미지 내용을 실제로 읽고 설명해 줘요.` : DEMO.find(([re]) => re.test(text))[1];
     try {
-      await sleep(450, signal);
+      await sleep(250, signal);
+      if (!hasImg) {
+        const think = '질문의 핵심을 파악하고, 답변에 필요한 내용을 순서대로 정리하는 중이에요.';
+        for (let i = 0; i < think.length; i += 6) { yield { type: 'thinking', text: think.slice(i, i + 6) }; await sleep(30, signal); }
+      }
+      await sleep(200, signal);
       for (let i = 0; i < reply.length;) {
         const n = 2 + Math.floor(Math.random() * 5);
         yield { type: 'text', text: reply.slice(i, i + n) };

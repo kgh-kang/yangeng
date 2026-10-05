@@ -36,13 +36,20 @@ async function sendAndWait(page, text) {
 function sse(events) {
   return events.map((e) => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join('');
 }
-function streamBody(text, stopReason = 'end_turn', model = 'claude-opus-5-5') {
+function streamBody(text, stopReason = 'end_turn', model = 'claude-opus-5-5', thinking = '') {
   const chunks = text.match(/.{1,4}/gs) || [];
+  const ti = thinking ? 1 : 0;
   return sse([
     { type: 'message_start', message: { id: 'msg_test', type: 'message', role: 'assistant', model, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 12, output_tokens: 1 } } },
-    { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
-    ...chunks.map((t) => ({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text: t } })),
-    { type: 'content_block_stop', index: 0 },
+    ...(thinking ? [
+      { type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '', signature: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'signature_delta', signature: 'sig' } },
+      { type: 'content_block_stop', index: 0 },
+    ] : []),
+    { type: 'content_block_start', index: ti, content_block: { type: 'text', text: '' } },
+    ...chunks.map((t) => ({ type: 'content_block_delta', index: ti, delta: { type: 'text_delta', text: t } })),
+    { type: 'content_block_stop', index: ti },
     { type: 'message_delta', delta: { stop_reason: stopReason, stop_sequence: null }, usage: { output_tokens: chunks.length } },
     { type: 'message_stop' },
   ]);
@@ -82,6 +89,15 @@ const tests = {
     assert(saved.length === 1 && saved[0].messages.length === 2, '대화가 저장되어야 함');
     assert(!saved[0].messages[1].pending, 'pending 플래그가 남으면 안 됨');
   },
+  async '데모: 답변 전 "생각하는 중"이 보이고, 끝나면 접힌 생각 과정으로 바뀐다'(b) {
+    const p = await newPage(b);
+    await p.fill('#input', '여행 일정 짜줘');
+    await p.press('#input', 'Enter');
+    await p.waitForSelector('.think-live', { timeout: 3000 });
+    await p.waitForFunction(() => !document.body.classList.contains('is-busy'), null, { timeout: 20000 });
+    assert(await p.isVisible('.think summary'), '생각 과정 요약');
+    assert(await p.isHidden('.think__body'), '기본은 접힘');
+  },
   async 'Shift+Enter는 줄바꿈, Enter는 전송'(b) {
     const p = await newPage(b);
     await p.fill('#input', '첫 줄');
@@ -94,7 +110,7 @@ const tests = {
     const p = await newPage(b);
     await p.fill('#input', '여행 일정 짜줘');
     await p.press('#input', 'Enter');
-    await p.waitForSelector('.msg--ai .md');
+    await p.waitForSelector('.msg--ai .ai__body > .md');
     await p.click('#send');
     await p.waitForSelector('.msg--ai .note');
     assert((await p.textContent('.msg--ai .note')).includes('멈췄어요'), '중지 안내');
@@ -204,7 +220,7 @@ const tests = {
 const liveTests = {
   async '실제 SDK: 요청 형식(모델·effort·fallbacks·브라우저 헤더)과 스트리밍 표시'(b) {
     const p = await newPage(b, { settings: { apiKey: 'sk-ant-test', model: 'claude-opus-5-5', effort: 'high', system: '존댓말로 답해줘' } });
-    const calls = await mockApi(p, () => ({ body: streamBody('안녕하세요! **Claude**가 답하고 있어요.\n\n- 하나\n- 둘') }));
+    const calls = await mockApi(p, () => ({ body: streamBody('안녕하세요! **Claude**가 답하고 있어요.\n\n- 하나\n- 둘', 'end_turn', 'claude-opus-5-5', '인사에 답하는 방법을 생각 중') }));
     assert(await p.isHidden('#demo-notice'), '키가 있으면 데모 안내 숨김');
     await sendAndWait(p, '안녕?');
     const c = calls[0];
@@ -216,6 +232,10 @@ const liveTests = {
     assert(c.headers['x-api-key'] === 'sk-ant-test', 'API 키');
     assert(c.body.system === '존댓말로 답해줘', 'system');
     assert(c.body.stream === true, 'stream');
+    assert(c.body.thinking && c.body.thinking.type === 'adaptive' && c.body.thinking.display === 'summarized', 'thinking 요약 표시');
+    assert(c.body.cache_control && c.body.cache_control.type === 'ephemeral', '프롬프트 캐시');
+    assert((await p.textContent('.msg--ai .think summary')).includes('생각 과정'), '생각 과정 접힘 표시');
+    assert(!(await p.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1'))[0].messages[1].thinkStart)), 'thinkStart 정리');
     assert(c.body.messages.length === 1 && c.body.messages[0].role === 'user', 'messages');
     assert((await p.textContent('.msg--ai .md strong')) === 'Claude', '마크다운 렌더');
     assert((await p.textContent('.msg--ai .ai__head')).includes('모아 깊게'), '모델 라벨');
@@ -230,6 +250,7 @@ const liveTests = {
     await sendAndWait(p, '짧게');
     assert(!calls[0].body.output_config, 'effort 없음');
     assert(!calls[0].body.fallbacks, 'fallbacks 없음');
+    assert(!calls[0].body.thinking, 'Haiku는 thinking 없음');
   },
   async '실제 SDK: 잘못된 키(401)면 안내와 설정 버튼'(b) {
     const p = await newPage(b, { settings: { apiKey: 'sk-ant-wrong' } });

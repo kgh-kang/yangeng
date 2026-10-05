@@ -23,7 +23,7 @@
     const align = cells(lines[1]).map((c) => (/^:-+:$/.test(c) ? 'center' : /-+:$/.test(c) ? 'right' : ''));
     const th = head.map((c, i) => `<th${align[i] ? ` style="text-align:${align[i]}"` : ''}>${inline(c)}</th>`).join('');
     const rows = lines.slice(2).map((l) => '<tr>' + cells(l).map((c, i) => `<td${align[i] ? ` style="text-align:${align[i]}"` : ''}>${inline(c)}</td>`).join('') + '</tr>').join('');
-    return `<div class="md-table"><table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<div class="md-table" tabindex="0" role="region" aria-label="표"><table><thead><tr>${th}</tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
   function list(lines, ordered) {
@@ -52,7 +52,7 @@
       const l = lines[i];
       if (!l.trim()) { i++; continue; }
       let m;
-      if ((m = l.match(/^(#{1,4})\s+(.*)$/))) { const n = Math.min(m[1].length + 1, 4); out.push(`<h${n}>${inline(m[2])}</h${n}>`); i++; continue; }
+      if ((m = l.match(/^(#{1,4})\s+(.*)$/))) { const n = m[1].length >= 4 ? 4 : 3; /* 메시지 제목(h2) 아래 단계 */ out.push(`<h${n}>${inline(m[2])}</h${n}>`); i++; continue; }
       if (/^\s*([-*_])\s*\1\s*\1[\s\1]*$/.test(l)) { out.push('<hr>'); i++; continue; }
       if (l.includes('|') && isTableSep(lines[i + 1])) {
         const t = [l, lines[i + 1]]; i += 2;
@@ -89,7 +89,7 @@
       const canPreview = PREVIEWABLE.has(lang) && !open;
       html += `<div class="codeblock" data-lang="${esc(lang || 'text')}"><div class="codeblock__head"><span>${esc(lang || 'code')}</span><span class="codeblock__btns">` +
         (canPreview ? '<button type="button" data-preview>미리보기</button>' : '') +
-        `<button type="button" data-copy-code>복사</button></span></div><pre><code>${esc(code)}</code></pre></div>`;
+        `<button type="button" data-copy-code>복사</button></span></div><pre tabindex="0"><code>${esc(code)}</code></pre></div>`;
     });
     return html;
   }
