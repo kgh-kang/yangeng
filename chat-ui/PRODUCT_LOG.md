@@ -7,14 +7,15 @@
 
 ```bash
 cd chat-ui
-python3 -m http.server 8765     # http://localhost:8765/app/
-node tests/e2e.js               # E2E 테스트 (Playwright 필요)
+npm run serve            # http://localhost:8765/app/  (python3 정적 서버, 빌드 없음)
+npm run test:prepare     # 테스트용 SDK 번들·KaTeX 준비 (최초 1회, npm 레지스트리 접근 필요)
+npm test                 # 렌더러 보안·성능 테스트 + E2E (서버가 떠 있어야 함, Playwright 필요)
 ```
 
 - API 키가 없으면 **데모 모드**로 동작합니다(미리 준비된 답변).
 - 설정에서 Anthropic API 키를 넣으면 공식 SDK(`@anthropic-ai/sdk`, 브라우저 ESM 빌드)로 Claude와 스트리밍 대화합니다.
-  키는 그 브라우저의 localStorage에만 저장됩니다. **개인용·프로토타입용** 구성이며, 여러 사용자가 쓰는 서비스는 키를 서버에 두고 같은 요청을 서버에서 보내야 합니다.
-- 실제 SDK 경로 테스트: SDK를 esbuild로 묶은 파일을 `SDK_BUNDLE=...`로 넘기면 CDN·API 요청을 가짜 서버로 대체해 검증합니다.
+  키는 그 브라우저에만 저장됩니다("이 기기에 키 기억하기"를 끄면 탭을 닫을 때 지워짐). **개인용·프로토타입용** 구성이며, 여러 사용자가 쓰는 서비스는 키를 서버에 두고 같은 요청을 서버에서 보내야 합니다.
+- E2E는 CDN(SDK·KaTeX)과 Anthropic API 요청을 테스트가 가로채 로컬 파일·가짜 응답으로 대신합니다. 네트워크 없이도 실제 SDK의 스트리밍·오류 처리 경로를 검증합니다.
 
 ## 구조
 
@@ -22,11 +23,15 @@ node tests/e2e.js               # E2E 테스트 (Playwright 필요)
 |---|---|
 | `app/index.html` | 화면 뼈대 (사이드바 · 대화 시트 · 미리보기 패널) |
 | `app/app.css` | 토스 스타일 토큰과 컴포넌트, 라이트/다크, 반응형 |
-| `app/js/markdown.js` | 스트리밍 안전 마크다운 렌더러 (표·체크리스트·코드·인용, 모든 입력 이스케이프) |
-| `app/js/store.js` | 대화·설정 저장 (localStorage, 용량 초과 시 오래된 이미지부터 정리) |
-| `app/js/api.js` | Claude SDK 스트리밍 / 데모 응답기, 오류를 사용자 문구로 변환 |
-| `app/js/app.js` | 렌더링, 대화 흐름, 첨부, 시트·다이얼로그, 단축키 |
-| `tests/e2e.js` | E2E 테스트 |
+| `app/js/markdown.js` | 스트리밍 안전 마크다운 렌더러 (표·체크리스트·코드 강조·수식, 모든 입력 이스케이프) |
+| `app/js/ui.js` | 공통 UI: 토스트, 바텀시트·다이얼로그·메뉴(포커스 가두기), 복사, 파일 저장 |
+| `app/js/files.js` | 첨부 파일 읽기 (이미지 축소, PDF, 텍스트) |
+| `app/js/store.js` | 대화·설정 저장 (localStorage, 용량 초과 시 정리, 백업 검증·복원) |
+| `app/js/api.js` | Claude SDK 스트리밍(생각 과정·웹 검색·pause_turn) / 데모 응답기, 오류 문구 |
+| `app/js/app.js` | 화면 렌더링, 대화 흐름, 패널, 설정, 단축키 |
+| `tests/markdown.fuzz.js` | 렌더러 XSS·ReDoS·수식 판별 테스트 (node) |
+| `tests/e2e.js` | E2E 테스트 (Playwright) |
+| `tests/prepare.sh` | 테스트용 SDK 번들·KaTeX 준비 |
 
 ---
 
@@ -196,3 +201,19 @@ node tests/e2e.js               # E2E 테스트 (Playwright 필요)
 - 표 안의 수식, 다크 테마도 확인
 
 **검증**: E2E 32개(수식 로딩·횟수·MathML 개수), 렌더러 테스트에 수식 판별 9케이스 추가
+
+## 라운드 9 — 유지보수성 · 재현 가능한 테스트
+
+**평가**: `app.js`가 820줄로 커졌다. 섹션 구분은 잘 돼 있어 전면 분리는 위험 대비 이득이 작다고 보고, 의존성이 거의 없는 두 덩어리만 떼어냈다.
+
+- `ui.js`: 토스트·레이어·확인/입력 다이얼로그·복사·파일 저장 → 다른 화면에서도 재사용 가능
+- `files.js`: 첨부 파일 읽기(순수 함수)
+- `app.js` 820 → 718줄
+
+**떼어내다 발견해 고친 것**
+- 다이얼로그·시트에 **포커스 가두기가 없어** Tab으로 뒤 화면에 포커스가 넘어갔음 → 레이어 안에서만 돌도록, 닫으면 연 버튼으로 복귀
+- 레이어가 열린 뒤 30ms 타이머가 사용자가 이미 옮긴 포커스를 첫 입력칸으로 다시 빼앗을 수 있었음 → 이미 안에 포커스가 있으면 건드리지 않음 (라운드 7의 간헐 실패 테스트 원인으로 추정)
+
+**재현 가능한 테스트**: `npm run test:prepare`(SDK를 esbuild로 묶고 KaTeX를 받음) → `npm test`. 깨끗한 상태에서 다시 준비해 33개 통과 확인.
+
+**검증**: E2E 33개(포커스 가두기 추가) + 렌더러 테스트, axe serious 이상 0건

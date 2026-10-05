@@ -1,0 +1,12 @@
+{
+  "name": "moa-chat",
+  "private": true,
+  "description": "모아 — 채팅형 AI 웹앱 (빌드 없이 정적 파일로 동작)",
+  "scripts": {
+    "serve": "python3 -m http.server 8765",
+    "test:md": "node tests/markdown.fuzz.js",
+    "test:prepare": "bash tests/prepare.sh",
+    "test:e2e": "SDK_BUNDLE=tests/.cache/sdk.bundle.mjs KATEX_FILE=tests/.cache/katex.min.js node tests/e2e.js",
+    "test": "npm run test:md && npm run test:e2e"
+  }
+}

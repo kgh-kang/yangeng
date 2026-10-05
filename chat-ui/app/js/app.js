@@ -1,4 +1,4 @@
-/* app.js — 모아 채팅 앱 본체: 화면 렌더링, 대화 흐름, 첨부, 시트/다이얼로그, 단축키 */
+/* app.js — 모아 채팅 앱 본체: 화면 렌더링, 대화 흐름, 첨부, 패널, 설정, 단축키 */
 (function () {
   const { render: md, esc } = window.MoaMarkdown;
   const Store = window.MoaStore;
@@ -33,80 +33,7 @@
     more: '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><circle cx="4.5" cy="10" r="1.5"/><circle cx="10" cy="10" r="1.5"/><circle cx="15.5" cy="10" r="1.5"/></svg>',
   };
 
-  /* ================= 공통 UI: 토스트 · 레이어(시트/다이얼로그/메뉴) ================= */
-  let toastTimer;
-  function toast(msg) {
-    $$('.toast').forEach((t) => t.remove());
-    const t = document.createElement('div');
-    t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
-    document.body.appendChild(t);
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.remove(), 2200);
-  }
-
-  const layers = [];
-  let lastFocus = null;
-  /** 레이어를 연다. kind: 'sheet' | 'dialog' | 'menu'. 반환된 close()로 닫는다. */
-  function openLayer(kind, html, { anchor, label } = {}) {
-    closeLayers();
-    lastFocus = document.activeElement;
-    const wrap = document.createElement('div');
-    const ov = kind === 'menu' ? '<div class="overlay" style="background:transparent" data-close></div>' : '<div class="overlay" data-close></div>';
-    wrap.innerHTML = ov + `<div class="${kind}" role="${kind === 'menu' ? 'menu' : 'dialog'}" ${kind === 'menu' ? '' : 'aria-modal="true"'} ${label ? `aria-label="${esc(label)}"` : ''} tabindex="-1">${kind === 'sheet' ? '<div class="sheet__grip"></div>' : ''}${html}</div>`;
-    el.layer.appendChild(wrap);
-    const box = wrap.lastElementChild;
-    if (kind === 'menu' && anchor) {
-      const r = anchor.getBoundingClientRect();
-      const w = 200;
-      box.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
-      const below = r.bottom + 6;
-      box.style.top = (below + 220 > window.innerHeight ? Math.max(8, r.top - 6 - box.offsetHeight) : below) + 'px';
-    }
-    const close = () => {
-      wrap.remove();
-      const i = layers.indexOf(close); if (i >= 0) layers.splice(i, 1);
-      if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
-    };
-    wrap.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) close(); });
-    layers.push(close);
-    const first = box.querySelector('input, textarea, [autofocus]') || box.querySelector('button');
-    setTimeout(() => (first || box).focus({ preventScroll: true }), 30);
-    return { box, close };
-  }
-  function closeLayers() { while (layers.length) layers[layers.length - 1](); }
-
-  function confirmDialog({ title, text, ok = '확인', danger = false }) {
-    return new Promise((resolve) => {
-      const { box, close } = openLayer('dialog', `<h2>${esc(title)}</h2><p>${esc(text)}</p><div class="dialog__btns"><button class="btn" data-no>취소</button><button class="btn ${danger ? 'btn--red' : 'btn--blue'}" data-yes>${esc(ok)}</button></div>`, { label: title });
-      box.querySelector('[data-no]').onclick = () => { close(); resolve(false); };
-      box.querySelector('[data-yes]').onclick = () => { close(); resolve(true); };
-      box.querySelector('[data-yes]').focus();
-    });
-  }
-  function promptDialog({ title, value = '', ok = '저장' }) {
-    return new Promise((resolve) => {
-      const { box, close } = openLayer('dialog', `<h2>${esc(title)}</h2><form><input class="input" id="dlg-input" maxlength="80" value="${esc(value)}" aria-label="${esc(title)}" style="margin:8px 0 16px"><div class="dialog__btns"><button type="button" class="btn" data-no>취소</button><button class="btn btn--blue">${esc(ok)}</button></div></form>`, { label: title });
-      const input = box.querySelector('input');
-      setTimeout(() => input.select(), 40);
-      box.querySelector('[data-no]').onclick = () => { close(); resolve(null); };
-      box.querySelector('form').onsubmit = (e) => { e.preventDefault(); close(); resolve(input.value.trim() || null); };
-    });
-  }
-
-  function downloadFile(name, text, type) {
-    const blob = new Blob([text], { type: `${type};charset=utf-8` });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = name.replace(/[\\/:*?"<>|]/g, '_');
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }
-  async function copyText(text) {
-    try { await navigator.clipboard.writeText(text); return true; } catch (_) {
-      const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      let ok = false; try { ok = document.execCommand('copy'); } catch (_) {}
-      ta.remove(); return ok;
-    }
-  }
+  const { toast, openLayer, closeLayers, confirmDialog, promptDialog, downloadFile, copyText } = window.MoaUI;
 
   /* ================= 수식: 답변에 수식이 처음 나올 때만 KaTeX를 불러온다 ================= */
   const KATEX_URL = 'https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js';
@@ -336,36 +263,7 @@
   }
 
   /* ================= 첨부: 이미지 · PDF · 텍스트 파일 ================= */
-  const IMG_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-  const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|xml|html?|css|scss|js|mjs|cjs|jsx|ts|tsx|py|java|kt|go|rs|c|h|cpp|hpp|cs|rb|php|swift|sql|sh|bash|zsh|log|ini|toml|env|conf)$/i;
-  const LIMIT = { pdf: 20 * 1024 * 1024, text: 500 * 1024 };
-  const kindOf = (f) => (IMG_TYPES.includes(f.type) ? 'image' : f.type === 'application/pdf' || /\.pdf$/i.test(f.name) ? 'pdf' : f.type.startsWith('text/') || TEXT_EXT.test(f.name) ? 'text' : null);
-  const sizeLabel = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB');
-  const readAs = (file, how) => new Promise((res, rej) => { const fr = new FileReader(); fr.onerror = () => rej(new Error(`${file.name}을(를) 읽지 못했어요.`)); fr.onload = () => res(fr.result); fr[how](file); });
-
-  /** 이미지는 긴 변 1568px 이하로 줄여 저장 공간과 토큰을 아낀다 (Claude 권장 크기). */
-  async function readImage(file) {
-    const url = await readAs(file, 'readAsDataURL');
-    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error(`${file.name} 이미지를 열지 못했어요.`)); i.src = url; });
-    const scale = Math.min(1, 1568 / Math.max(img.width, img.height));
-    if (scale === 1 && (file.size < 1.5e6 || file.type === 'image/gif')) return { kind: 'image', name: file.name, mediaType: file.type, data: String(url).split(',')[1], size: file.size };
-    const cv = document.createElement('canvas');
-    cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
-    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-    const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-    const data = cv.toDataURL(type, 0.86).split(',')[1];
-    return { kind: 'image', name: file.name, mediaType: type, data, size: Math.round(data.length * 0.75) };
-  }
-  async function readFile(file) {
-    const kind = kindOf(file);
-    if (!kind) throw new Error(`${file.name}: 이미지, PDF, 텍스트·코드 파일만 첨부할 수 있어요.`);
-    if (kind === 'image') return readImage(file);
-    if (file.size > LIMIT[kind]) throw new Error(`${file.name}: ${kind === 'pdf' ? 'PDF는 20MB' : '텍스트 파일은 500KB'}까지 올릴 수 있어요.`);
-    if (kind === 'pdf') return { kind, name: file.name, mediaType: 'application/pdf', data: String(await readAs(file, 'readAsDataURL')).split(',')[1], size: file.size };
-    const text = await readAs(file, 'readAsText');
-    if (/\u0000/.test(text.slice(0, 2000))) throw new Error(`${file.name}: 텍스트 파일이 아닌 것 같아요.`);
-    return { kind, name: file.name, mediaType: 'text/plain', text, size: file.size };
-  }
+  const { read: readFile, sizeLabel } = window.MoaFiles;
   async function addFiles(files) {
     for (const f of Array.from(files)) {
       if (S.attachments.length >= MAX_ATTACH) { toast(`파일은 한 번에 ${MAX_ATTACH}개까지 보낼 수 있어요.`); break; }
@@ -774,9 +672,9 @@
     const mod = isMac ? e.metaKey : e.ctrlKey;
     if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); if (mobileMQ.matches) body.classList.add('nav-open'); else body.classList.remove('nav-collapsed'); el.search.focus(); el.search.select(); return; }
     if (mod && e.shiftKey && e.key.toLowerCase() === 'o') { e.preventDefault(); newChat(); return; }
-    if (e.key === '?' && !layers.length && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); openShortcuts(); return; }
+    if (e.key === '?' && !window.MoaUI.hasLayer() && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); openShortcuts(); return; }
     if (e.key === 'Escape') {
-      if (layers.length) { layers[layers.length - 1](); return; }
+      if (window.MoaUI.hasLayer()) { window.MoaUI.closeTop(); return; }
       if (S.busy && document.activeElement === el.input) { stop(); return; }
       if (S.panel) { closePanel(true); return; }
       if (body.classList.contains('nav-open')) { closeNav(); return; }

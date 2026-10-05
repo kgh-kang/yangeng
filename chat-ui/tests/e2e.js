@@ -427,6 +427,20 @@ const tests = {
     assert(!p.errors.length, p.errors.join());
     await ctx.close();
   },
+  async '접근성: 설정 시트에서 Tab 포커스가 시트 밖으로 나가지 않고, 닫으면 연 버튼으로 돌아온다'(b) {
+    const p = await newPage(b);
+    await p.focus('.me');
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('#set-name');
+    for (let i = 0; i < 25; i++) {
+      await p.keyboard.press('Tab');
+      assert(await p.evaluate(() => !!document.activeElement.closest('.sheet')), `Tab ${i + 1}번째에 시트 밖으로 나감`);
+    }
+    await p.keyboard.press('Shift+Tab');
+    assert(await p.evaluate(() => !!document.activeElement.closest('.sheet')), 'Shift+Tab도 안에서');
+    await p.keyboard.press('Escape');
+    assert(await p.evaluate(() => document.activeElement.classList.contains('me')), '연 버튼으로 포커스 복귀');
+  },
   async '모바일: 가로 넘침 없음 · 메뉴 서랍 열고 닫기'(b) {
     const p = await newPage(b, { viewport: { width: 390, height: 844 } });
     await sendAndWait(p, '월급 300 저축 계획');
