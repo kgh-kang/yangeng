@@ -197,7 +197,7 @@
   }
   function sourcesHTML(m) {
     const cited = new Set(m.cited || []);
-    const list = m.sources.slice().sort((a, b) => cited.has(b.url) - cited.has(a.url));
+    const list = m.sources.filter((x) => /^https?:\/\//i.test(x.url)).sort((a, b) => cited.has(b.url) - cited.has(a.url));
     const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch (_) { return u; } };
     const item = (s) => `<a class="src${cited.has(s.url) ? ' is-cited' : ''}" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="src__fav" aria-hidden="true">${esc(host(s.url).slice(0, 1))}</span><span class="src__txt"><b>${esc(s.title)}</b><small>${esc(host(s.url))}${cited.has(s.url) ? ' · 인용됨' : ''}</small></span></a>`;
     const open = S.openSources.has(m.id);
@@ -206,13 +206,17 @@
   }
   function aiHTML(m) {
     const model = m.model && m.model !== 'demo' ? API.modelInfo(m.model).name : m.model === 'demo' ? '데모' : '';
-    const actions = m.pending ? '' : `<div class="actions">${m.content ? `<button data-action="copy-msg" aria-label="복사" title="복사">${I.copy}</button>` : ''}<button data-action="retry" aria-label="다시 생성" title="다시 생성">${I.retry}</button>${m.content ? `<button data-action="feedback" data-v="up" aria-label="좋아요" aria-pressed="${m.feedback === 'up'}">${I.up}</button><button data-action="feedback" data-v="down" aria-label="별로예요" aria-pressed="${m.feedback === 'down'}">${I.down}</button>` : ''}</div>`;
+    const u = m.usage;
+    const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n));
+    const usage = u ? `<span class="usage" title="입력 ${u.input.toLocaleString()}토큰${u.cached ? ` (캐시 ${u.cached.toLocaleString()})` : ''} · 출력 ${u.output.toLocaleString()}토큰${u.searches ? ` · 검색 ${u.searches}회` : ''} · 대략적인 추정치">${fmt(u.input + u.output)} 토큰 · $${u.cost < 0.01 ? u.cost.toFixed(4) : u.cost.toFixed(2)}</span>` : '';
+    const actions = m.pending ? '' : `<div class="actions">${m.content ? `<button data-action="copy-msg" aria-label="복사" title="복사">${I.copy}</button>` : ''}<button data-action="retry" aria-label="다시 생성" title="다시 생성">${I.retry}</button>${m.content ? `<button data-action="feedback" data-v="up" aria-label="좋아요" aria-pressed="${m.feedback === 'up'}">${I.up}</button><button data-action="feedback" data-v="down" aria-label="별로예요" aria-pressed="${m.feedback === 'down'}">${I.down}</button>` : ''}${usage}</div>`;
     return `<h2 class="ai__head"><i class="logo" aria-hidden="true">모</i>모아${model ? ` <small>· ${esc(model)}</small>` : ''}<span class="sr-only">의 답변</span></h2><div class="ai__body">${aiBodyHTML(m)}</div>${actions}`;
   }
   function msgNode(m) {
     const n = document.createElement('div');
     n.className = `msg msg--${m.role === 'user' ? 'user' : 'ai'}`;
     n.dataset.id = m.id;
+    if (m.at) n.title = new Date(m.at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' });
     n.innerHTML = m.role === 'user' ? userHTML(m) : aiHTML(m);
     return n;
   }
@@ -275,6 +279,32 @@
     }
   });
   el.composer.addEventListener('submit', (e) => { e.preventDefault(); S.busy ? stop() : submit(); });
+
+  /* ================= 음성 입력 (브라우저 받아쓰기, 한국어) ================= */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = $('[data-action="mic"]');
+  let rec = null;
+  if (!SR && micBtn) micBtn.hidden = true;
+  function toggleMic() {
+    if (!SR) return;
+    if (rec) { rec.stop(); return; }
+    rec = new SR();
+    rec.lang = 'ko-KR'; rec.interimResults = true; rec.continuous = false;
+    const base = el.input.value ? el.input.value.replace(/\s*$/, ' ') : '';
+    rec.onresult = (e) => {
+      let text = '';
+      for (const r of e.results) text += r[0].transcript;
+      el.input.value = base + text; syncInput();
+    };
+    rec.onerror = (e) => {
+      toast(e.error === 'not-allowed' || e.error === 'service-not-allowed' ? '마이크 권한을 허용해 주세요' : e.error === 'no-speech' ? '말소리가 들리지 않았어요' : '음성 입력을 하지 못했어요');
+    };
+    rec.onend = () => { rec = null; micBtn.setAttribute('aria-pressed', 'false'); micBtn.setAttribute('aria-label', '음성으로 입력'); el.input.focus(); };
+    try {
+      rec.start();
+      micBtn.setAttribute('aria-pressed', 'true'); micBtn.setAttribute('aria-label', '음성 입력 멈추기');
+    } catch (_) { rec = null; toast('음성 입력을 시작하지 못했어요'); }
+  }
 
   /* ================= 이미지 첨부 ================= */
   const OK_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
@@ -341,8 +371,9 @@
     const t = text.replace(/\s+/g, ' ').trim();
     return t.length > 30 ? t.slice(0, 30) + '…' : t || '이미지 질문';
   }
-  function saveConv(opts) {
-    const r = Store.commit(S.conv, opts);
+  function saveConv(opts, conv = S.conv) {
+    if (!conv) return;
+    const r = Store.commit(conv, opts);
     if (r === 'trimmed') toast('저장 공간이 부족해 오래된 대화의 이미지를 지웠어요.');
     if (r === 'failed') toast('저장 공간이 가득 차서 이 대화를 저장하지 못했어요.');
   }
@@ -407,6 +438,7 @@
         }
         if (ev.type === 'done') {
           if (ev.model && ev.model !== 'demo') m.model = ev.model;
+          if (ev.usage) m.usage = API.summarizeUsage(ev.usage, m.model);
           if (ev.stopReason === 'refusal') m.error = '이 요청에는 답변할 수 없어요. 질문을 바꿔서 다시 물어봐 주세요.';
           if (ev.stopReason === 'max_tokens') m.truncated = true;
         }
@@ -424,7 +456,7 @@
     S.busy = false; S.abort = null;
     body.classList.remove('is-busy'); syncInput();
     el.thread.removeAttribute('aria-busy');
-    saveConv();
+    saveConv(undefined, c);
     if (S.conv === c) { const stick = nearBottom(); rerenderMsg(m); if (stick) toBottom(false); }
     renderSidebar();
   }
@@ -605,6 +637,7 @@
       case 'settings': openSettings(); break;
       case 'model': openModelSheet(); break;
       case 'attach': el.file.click(); break;
+      case 'mic': toggleMic(); break;
       case 'detach': S.attachments.splice(+a.dataset.i, 1); renderAttachments(); syncInput(); break;
       case 'to-bottom': toBottom(true); break;
       case 'toggle-search': {
@@ -659,7 +692,20 @@
   el.search.placeholder = matchMedia('(pointer: fine)').matches ? `대화 검색  (${isMac ? '⌘' : 'Ctrl'} K)` : '대화 검색';
 
   Store.on((what) => { if (what === 'settings') renderChrome(); if (what === 'convs') renderSidebar(); });
-  window.addEventListener('storage', (e) => { if (e.key && e.key.startsWith('moa.')) location.reload(); });
+  // 다른 탭에서 바뀌면 목록·설정만 다시 읽는다 (진행 중인 답변은 끊지 않음)
+  window.addEventListener('storage', (e) => {
+    if (!e.key || !e.key.startsWith('moa.')) return;
+    Store.reload();
+    if (S.conv && !S.busy) {
+      const fresh = Store.get(S.conv.id);
+      if (fresh) { S.conv = fresh; if (!S.editing) renderThread(); } else newChat();
+    }
+    renderChrome(); renderSidebar();
+  });
+  window.addEventListener('hashchange', () => {
+    const id = location.hash.slice(1);
+    if (id && (!S.conv || S.conv.id !== id) && Store.get(id)) openConv(id);
+  });
 
   /* ================= 시작 ================= */
   // 답변 도중 창이 닫혔던 메시지는 '중지됨'으로 정리

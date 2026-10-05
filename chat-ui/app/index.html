@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f2f4f6">
+<meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101013" media="(prefers-color-scheme: dark)">
+<meta name="description" content="모아 — 무엇이든 물어보는 AI 채팅">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="모아">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>모아</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -86,6 +93,7 @@
             <button type="button" class="tool-toggle" data-action="toggle-search" aria-pressed="false" title="웹 검색으로 최신 정보 찾기"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c2 2.2 2.8 4.5 2.8 7S12 14.8 10 17c-2-2.2-2.8-4.5-2.8-7S8 5.2 10 3z"/></svg><span class="tool-toggle__label">웹 검색</span></button>
             <label class="sr-only" for="input">메시지</label>
             <textarea id="input" rows="1" placeholder="모아에게 물어보기" enterkeyhint="send"></textarea>
+            <button type="button" class="icon-btn mic" data-action="mic" aria-label="음성으로 입력" aria-pressed="false" title="음성으로 입력"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7.2" y="2.5" width="5.6" height="10" rx="2.8"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5"/></svg></button>
             <button type="submit" class="send" id="send" aria-label="보내기" disabled>
               <svg class="i-up" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15.5v-11M5.5 9L10 4.5 14.5 9"/></svg>
               <svg class="i-stop" width="13" height="13" viewBox="0 0 12 12" fill="currentColor"><rect width="12" height="12" rx="3"/></svg>

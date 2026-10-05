@@ -75,6 +75,10 @@ const tests = {
     assert(await p.isVisible('#demo-notice'), '데모 안내가 보여야 함');
     assert((await p.$$('.row')).length === 4, '추천 질문 4개');
     assert(await p.isHidden('#to-bottom'), '빈 화면에서 맨 아래로 버튼은 숨김');
+    const mf = await p.evaluate(async () => (await fetch(document.querySelector('link[rel=manifest]').href)).json());
+    assert(mf.name === '모아' && mf.icons.length === 4, '매니페스트');
+    const ok = await p.evaluate(async () => (await Promise.all(['icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'].map((u) => fetch(u)))).every((r) => r.ok));
+    assert(ok, '아이콘 파일');
     assert(await p.isDisabled('#send'), '빈 입력이면 전송 비활성');
     assert(!p.errors.length, p.errors.join());
   },
@@ -88,6 +92,8 @@ const tests = {
     const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1')));
     assert(saved.length === 1 && saved[0].messages.length === 2, '대화가 저장되어야 함');
     assert(!saved[0].messages[1].pending, 'pending 플래그가 남으면 안 됨');
+    assert(/\d/.test(await p.getAttribute('.msg--user', 'title')), '보낸 시각 툴팁');
+    assert(!(await p.$('.msg--ai .usage')), '데모 답변엔 비용 표시 없음');
   },
   async '데모: 답변 전 "생각하는 중"이 보이고, 끝나면 접힌 생각 과정으로 바뀐다'(b) {
     const p = await newPage(b);
@@ -246,6 +252,47 @@ const tests = {
     await p.waitForSelector('.toast');
     assert((await p.textContent('.toast')).includes('백업 파일이 아니에요'), '잘못된 파일 안내');
   },
+  async '회귀: 답변 도중 새 대화를 눌러도 오류 없이 중지된 답변이 저장된다'(b) {
+    const p = await newPage(b);
+    await p.fill('#input', '여행 일정');
+    await p.press('#input', 'Enter');
+    await p.waitForSelector('.think-live');
+    await p.click('[data-action="new-chat"]');
+    await p.waitForTimeout(600);
+    assert(!p.errors.length, p.errors.join());
+    const saved = await p.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1'))[0].messages);
+    assert(saved.length === 2 && saved[1].stopped, '중지된 답변 저장');
+  },
+  async '회귀: 답변 도중 그 대화를 삭제하면 되살아나지 않는다'(b) {
+    const p = await newPage(b);
+    await p.fill('#input', '여행 일정');
+    await p.press('#input', 'Enter');
+    await p.waitForSelector('.think-live');
+    await p.click('[data-action="conv-menu"]');
+    await p.click('[data-m="delete"]');
+    await p.click('.dialog [data-yes]');
+    await p.waitForTimeout(600);
+    assert((await p.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1')).length)) === 0, '삭제 유지');
+    assert(!(await p.$('.conv')), '목록에 없음');
+  },
+  async '여러 탭: 다른 탭에서 만든 대화가 목록에 나타나고, 진행 중 답변은 끊기지 않는다'(b) {
+    const ctx = await b.newContext({ viewport: { width: 1280, height: 820 } });
+    const [p1, p2] = [await ctx.newPage(), await ctx.newPage()];
+    for (const p of [p1, p2]) { await p.route(/fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net\/gh\//, (r) => r.abort()); await p.goto(BASE); }
+    await p1.fill('#input', '여행 일정 짜줘');
+    await p1.press('#input', 'Enter');
+    await p1.waitForSelector('.think-live');
+    await p2.fill('#input', '저축 계획');
+    await p2.press('#input', 'Enter');
+    await p2.waitForFunction(() => !document.body.classList.contains('is-busy'), null, { timeout: 20000 });
+    await p1.waitForFunction(() => !document.body.classList.contains('is-busy'), null, { timeout: 20000 });
+    assert(!(await p1.$('.msg--ai .note')), '탭1 답변이 끊기지 않음');
+    await p1.waitForTimeout(200);
+    assert((await p1.$$('.conv')).length === 2, '탭1 목록에 2개');
+    const n = await p1.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1')).length);
+    assert(n === 2, `저장된 대화 2개 (${n})`);
+    await ctx.close();
+  },
   async '모바일: 가로 넘침 없음 · 메뉴 서랍 열고 닫기'(b) {
     const p = await newPage(b, { viewport: { width: 390, height: 844 } });
     await sendAndWait(p, '월급 300 저축 계획');
@@ -283,6 +330,8 @@ const liveTests = {
     assert(c.body.messages.length === 1 && c.body.messages[0].role === 'user', 'messages');
     assert((await p.textContent('.msg--ai .md strong')) === 'Claude', '마크다운 렌더');
     assert((await p.textContent('.msg--ai .ai__head')).includes('모아 깊게'), '모델 라벨');
+    assert(/토큰 · \$/.test(await p.textContent('.msg--ai .usage')), '토큰·비용 표시');
+    assert((await p.getAttribute('.msg--ai .usage', 'title')).includes('입력 12토큰'), '토큰 상세 툴팁');
     // 두 번째 턴: 이전 대화가 함께 전달되는지
     await sendAndWait(p, '고마워');
     assert(calls[1].body.messages.length === 3, '이전 대화 포함');

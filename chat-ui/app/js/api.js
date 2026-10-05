@@ -8,9 +8,10 @@
 (function () {
   const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.131.0/+esm';
   const MODELS = [
-    { id: 'claude-opus-5-5', name: '모아 깊게', desc: '어려운 문제도 정확하게 · Claude Opus 5.5', effort: true, fallbacks: true },
-    { id: 'claude-sonnet-5-5', name: '모아 기본', desc: '빠르고 똑똑하게 · Claude Sonnet 5.5', effort: true, fallbacks: true },
-    { id: 'claude-haiku-4-5', name: '모아 라이트', desc: '짧은 질문에 가장 빠르게 · Claude Haiku 4.5', effort: false, fallbacks: false },
+    // price: 100만 토큰당 USD [입력, 출력]
+    { id: 'claude-opus-5-5', name: '모아 깊게', desc: '어려운 문제도 정확하게 · Claude Opus 5.5', effort: true, fallbacks: true, price: [4, 20] },
+    { id: 'claude-sonnet-5-5', name: '모아 기본', desc: '빠르고 똑똑하게 · Claude Sonnet 5.5', effort: true, fallbacks: true, price: [2, 10] },
+    { id: 'claude-haiku-4-5', name: '모아 라이트', desc: '짧은 질문에 가장 빠르게 · Claude Haiku 4.5', effort: false, fallbacks: false, price: [1, 5] },
   ];
   const modelInfo = (id) => MODELS.find((m) => m.id === id) || MODELS[0];
 
@@ -165,7 +166,19 @@
     yield { type: 'done', stopReason: 'end_turn', model: 'demo' };
   }
 
+  /** 응답 usage → 표시용 요약. 캐시 쓰기 1.25배, 캐시 읽기 0.1배, 웹 검색 1천 회당 $10 (대략적인 추정) */
+  function summarizeUsage(usage, modelId) {
+    if (!usage) return null;
+    const [pin, pout] = (MODELS.find((m) => modelId && modelId.startsWith(m.id)) || MODELS[0]).price;
+    const input = usage.input_tokens || 0, write = usage.cache_creation_input_tokens || 0, read = usage.cache_read_input_tokens || 0;
+    const output = usage.output_tokens || 0;
+    const searches = (usage.server_tool_use && usage.server_tool_use.web_search_requests) || 0;
+    const cost = (input * pin + write * pin * 1.25 + read * pin * 0.1 + output * pout) / 1e6 + searches * 0.01;
+    return { input: input + write + read, cached: read, output, searches, cost };
+  }
+
   window.MoaAPI = {
+    summarizeUsage,
     MODELS,
     modelInfo,
     toApiMessages,
