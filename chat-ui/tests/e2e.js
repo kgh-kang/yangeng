@@ -151,6 +151,34 @@ const tests = {
     await p.keyboard.press('Escape');
     assert(await p.isHidden('#panel'), 'Esc로 닫힘');
   },
+  async '결과물 버전: 넓은 화면에선 자동으로 열리고, 버전을 넘겨볼 수 있다'(b) {
+    const p = await newPage(b, { viewport: { width: 1400, height: 860 } });
+    await sendAndWait(p, 'HTML 카드 만들어줘');
+    await p.waitForSelector('#panel iframe', { state: 'visible' });
+    assert(await p.isHidden('#panel-foot'), '버전 1개면 버전 바 숨김');
+    await sendAndWait(p, '버튼 색 바꾼 HTML 카드 다시 만들어줘');
+    await p.waitForFunction(() => document.querySelector('#panel-ver').textContent === '버전 2 / 2');
+    await p.click('#panel-prev');
+    assert((await p.textContent('#panel-ver')) === '버전 1 / 2', '이전 버전');
+    assert(await p.isDisabled('#panel-prev'), '첫 버전에서 이전 비활성');
+    await p.click('[data-action="panel-close"]');
+    await sendAndWait(p, 'HTML 카드 하나 더');
+    assert(await p.isHidden('#panel'), '사용자가 닫은 대화에선 자동으로 다시 열지 않음');
+  },
+  async '다른 모델로 다시 생성 · 빈 화면의 최근 대화 이어하기'(b) {
+    const p = await newPage(b);
+    await sendAndWait(p, '저축 계획');
+    await p.click('.msg--ai [data-action="retry-model"]');
+    await p.click('[data-rm="claude-haiku-4-5"]');
+    await p.waitForFunction(() => !document.body.classList.contains('is-busy') && document.querySelector('.msg--ai .actions'));
+    assert((await p.textContent('#model-label')) === '모아 라이트', '모델 바뀜');
+    assert((await p.$$('.msg')).length === 2, '메시지 2개 유지');
+    await p.click('[data-action="new-chat"]');
+    assert(await p.isVisible('#recent'), '최근 대화 섹션');
+    assert((await p.textContent('#recent .row b')) === '저축 계획', '최근 대화 제목');
+    await p.click('#recent .row');
+    assert((await p.$$('.msg')).length === 2, '최근 대화 열림');
+  },
   async '새로고침해도 대화가 유지되고 주소(#id)로 다시 열린다'(b) {
     const p = await newPage(b);
     await sendAndWait(p, '안녕');

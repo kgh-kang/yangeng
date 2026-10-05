@@ -66,6 +66,7 @@
           <span><b>지금은 데모 모드예요</b><small>Anthropic API 키를 연결하면 Claude가 실제로 답해요</small></span>
           <svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg>
         </button>
+        <div class="recent" id="recent" hidden><div class="section-label">이어서 대화하기</div><div class="rows"></div></div>
         <div class="section-label">이런 걸 많이 물어봐요</div>
         <div class="rows">
           <button class="row" data-suggest="이번 주 회의록을 3줄로 요약하고 담당자별 할 일을 표로 정리해줘"><span class="tile" style="background:var(--blue-weak)">📝</span><span><b>회의록 요약하기</b><small>긴 글을 핵심만, 할 일은 표로</small></span><svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>
@@ -117,6 +118,11 @@
       <button class="icon-btn icon-btn--sm" data-action="panel-close" aria-label="미리보기 닫기" title="닫기 (Esc)"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
     </header>
     <div class="panel__body" id="panel-body"></div>
+    <footer class="panel__foot" id="panel-foot" hidden>
+      <button class="icon-btn icon-btn--sm" id="panel-prev" data-action="panel-prev" aria-label="이전 버전"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.5 5l-5 5 5 5"/></svg></button>
+      <span id="panel-ver" aria-live="polite">버전 1 / 1</span>
+      <button class="icon-btn icon-btn--sm" id="panel-next" data-action="panel-next" aria-label="다음 버전"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M7.5 5l5 5-5 5"/></svg></button>
+    </footer>
   </aside>
 </div>
 

@@ -15,9 +15,10 @@
     modelLabel: $('#model-label'), greeting: $('#greeting'), demoNotice: $('#demo-notice'), toBottom: $('#to-bottom'),
     meName: $('#me-name'), meAv: $('#me-av'), mePlan: $('#me-plan'), liveDot: $('#live-dot'),
     panel: $('#panel'), panelBody: $('#panel-body'), panelTitle: $('#panel-title'), panelSub: $('#panel-sub'), layer: $('#layer'),
+    panelVer: $('#panel-ver'), panelPrev: $('#panel-prev'), panelNext: $('#panel-next'), panelFoot: $('#panel-foot'), recent: $('#recent'),
   };
 
-  const S = { conv: null, busy: false, abort: null, attachments: [], panel: null, query: '', editing: null, openSources: new Set() };
+  const S = { conv: null, busy: false, abort: null, attachments: [], panel: null, query: '', editing: null, openSources: new Set(), panelDismissed: new Set() };
   const MAX_ATTACH = 5;
 
   const I = {
@@ -124,7 +125,17 @@
     q = q.toLowerCase();
     return (c.title || '').toLowerCase().includes(q) || c.messages.some((m) => (m.content || '').toLowerCase().includes(q));
   }
+  function renderRecent() {
+    const list = Store.list().slice(0, 2);
+    el.recent.hidden = !list.length;
+    el.recent.querySelector('.rows').innerHTML = list.map((c) => {
+      const last = [...c.messages].reverse().find((m) => m.role === 'assistant' && m.content);
+      const snippet = last ? last.content.replace(/```[\s\S]*?```/g, '[코드]').replace(/[#*_>`|-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+      return `<button class="row" data-action="open" data-id="${c.id}"><span class="tile" style="background:var(--fill)">💬</span><span><b>${esc(c.title || '새 대화')}</b><small>${esc(snippet || groupOf(c))}</small></span><svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>`;
+    }).join('');
+  }
   function renderSidebar() {
+    renderRecent();
     const list = Store.list().filter((c) => matches(c, S.query));
     if (!list.length) {
       el.convs.innerHTML = `<div class="empty-list">${S.query ? `“${esc(S.query)}”에 맞는 대화가 없어요` : '아직 대화가 없어요.<br>첫 질문을 보내 보세요.'}</div>`;
@@ -205,11 +216,12 @@
     return `<div class="sources"><div class="sources__label">출처 ${list.length}개</div><div class="sources__list">${shown.map(item).join('')}</div>${list.length > 4 ? `<button class="sources__more" data-action="more-sources">${open ? '접기' : `${list.length - 4}개 더 보기`}</button>` : ''}</div>`;
   }
   function aiHTML(m) {
-    const model = m.model && m.model !== 'demo' ? API.modelInfo(m.model).name : m.model === 'demo' ? '데모' : '';
+    const known = m.model && API.MODELS.find((x) => m.model.startsWith(x.id));
+    const model = m.model === 'demo' ? '데모' : known ? known.name : m.model || '';
     const u = m.usage;
     const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n));
     const usage = u ? `<span class="usage" title="입력 ${u.input.toLocaleString()}토큰${u.cached ? ` (캐시 ${u.cached.toLocaleString()})` : ''} · 출력 ${u.output.toLocaleString()}토큰${u.searches ? ` · 검색 ${u.searches}회` : ''} · 대략적인 추정치">${fmt(u.input + u.output)} 토큰 · $${u.cost < 0.01 ? u.cost.toFixed(4) : u.cost.toFixed(2)}</span>` : '';
-    const actions = m.pending ? '' : `<div class="actions">${m.content ? `<button data-action="copy-msg" aria-label="복사" title="복사">${I.copy}</button>` : ''}<button data-action="retry" aria-label="다시 생성" title="다시 생성">${I.retry}</button>${m.content ? `<button data-action="feedback" data-v="up" aria-label="좋아요" aria-pressed="${m.feedback === 'up'}">${I.up}</button><button data-action="feedback" data-v="down" aria-label="별로예요" aria-pressed="${m.feedback === 'down'}">${I.down}</button>` : ''}${usage}</div>`;
+    const actions = m.pending ? '' : `<div class="actions">${m.content ? `<button data-action="copy-msg" aria-label="복사" title="복사">${I.copy}</button>` : ''}<button data-action="retry" aria-label="다시 생성" title="다시 생성">${I.retry}</button><button data-action="retry-model" aria-label="다른 모델로 다시 생성" title="다른 모델로 다시 생성" aria-haspopup="menu"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 8l5 5 5-5"/></svg></button>${m.content ? `<button data-action="feedback" data-v="up" aria-label="좋아요" aria-pressed="${m.feedback === 'up'}">${I.up}</button><button data-action="feedback" data-v="down" aria-label="별로예요" aria-pressed="${m.feedback === 'down'}">${I.down}</button>` : ''}${usage}</div>`;
     return `<h2 class="ai__head"><i class="logo" aria-hidden="true">모</i>모아${model ? ` <small>· ${esc(model)}</small>` : ''}<span class="sr-only">의 답변</span></h2><div class="ai__body">${aiBodyHTML(m)}</div>${actions}`;
   }
   function msgNode(m) {
@@ -243,6 +255,7 @@
     const c = Store.get(id);
     if (!c) return;
     S.conv = c; S.editing = null;
+    if (S.panel) closePanel();
     renderChrome(); renderSidebar(); renderThread();
     requestAnimationFrame(() => toBottom(false));
     closeNav();
@@ -457,7 +470,7 @@
     body.classList.remove('is-busy'); syncInput();
     el.thread.removeAttribute('aria-busy');
     saveConv(undefined, c);
-    if (S.conv === c) { const stick = nearBottom(); rerenderMsg(m); if (stick) toBottom(false); }
+    if (S.conv === c) { const stick = nearBottom(); rerenderMsg(m); if (stick) toBottom(false); if (!m.error && !m.stopped) autoOpenArtifact(m); }
     renderSidebar();
   }
   function stop() { if (S.abort) S.abort.abort(); }
@@ -484,28 +497,64 @@
     generate();
   }
 
-  /* ================= 결과물 미리보기 패널 ================= */
-  function openPanel(code, lang) {
-    S.panel = { code, lang };
-    const doc = lang === 'svg' ? `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;min-height:100vh">${code}</body>` : code;
-    el.panelTitle.textContent = (code.match(/<title>([^<]{1,60})<\/title>/i) || [])[1] || '미리보기';
-    el.panelSub.textContent = `${lang.toUpperCase()} · ${code.split('\n').length}줄`;
-    el.panel.hidden = false; body.classList.add('panel-open');
-    setPanelTab('preview', doc);
+  /* ================= 결과물 미리보기 패널 (대화 속 HTML/SVG를 버전으로 넘겨보기) ================= */
+  function artifactsOf(c) {
+    const out = [];
+    if (!c) return out;
+    for (const m of c.messages) {
+      if (m.role !== 'assistant' || !m.content) continue;
+      const re = /^```(html|svg|xml)[^\n]*\n([\s\S]*?)^```/gm;
+      let x;
+      while ((x = re.exec(m.content))) out.push({ lang: x[1], code: x[2].replace(/\n$/, ''), msgId: m.id });
+    }
+    return out;
   }
-  function setPanelTab(tab, doc) {
+  const docFor = (a) => (a.lang === 'html' ? a.code : `<!doctype html><meta charset="utf-8"><body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#fff">${a.code}</body>`);
+  function openPanel(code, lang, { index } = {}) {
+    const list = artifactsOf(S.conv);
+    let i = index ?? list.findIndex((a) => a.code === code);
+    if (i < 0) { list.push({ code, lang }); i = list.length - 1; }
+    S.panel = { list, i, tab: S.panel ? S.panel.tab : 'preview' };
+    S.panelDismissed.delete(S.conv && S.conv.id);
+    renderPanel();
+  }
+  function renderPanel() {
+    const { list, i, tab } = S.panel;
+    const a = list[i];
+    el.panelTitle.textContent = (a.code.match(/<title>([^<]{1,60})<\/title>/i) || [])[1] || (a.lang === 'svg' ? '그림' : '미리보기');
+    el.panelSub.textContent = `${a.lang.toUpperCase()} · ${a.code.split('\n').length}줄`;
+    el.panelVer.textContent = `버전 ${i + 1} / ${list.length}`;
+    el.panelPrev.disabled = i === 0; el.panelNext.disabled = i === list.length - 1;
+    el.panelFoot.hidden = list.length < 2;
+    el.panel.hidden = false; body.classList.add('panel-open');
+    setPanelTab(tab);
+  }
+  function setPanelTab(tab) {
+    S.panel.tab = tab;
+    const a = S.panel.list[S.panel.i];
     $$('#panel [data-tab]').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === tab)));
     if (tab === 'preview') {
       const f = document.createElement('iframe');
       f.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals');
       f.setAttribute('title', '미리보기');
-      f.srcdoc = doc || (S.panel.lang === 'svg' ? `<!doctype html><body style="margin:0;display:grid;place-items:center;min-height:100vh">${S.panel.code}</body>` : S.panel.code);
+      f.srcdoc = docFor(a);
       el.panelBody.replaceChildren(f);
     } else {
-      el.panelBody.innerHTML = `<pre class="panel__code"><code>${esc(S.panel.code)}</code></pre>`;
+      el.panelBody.innerHTML = `<pre class="panel__code" tabindex="0"><code>${MoaMarkdown.highlight(a.code, a.lang)}</code></pre>`;
     }
   }
-  function closePanel() { S.panel = null; el.panel.hidden = true; body.classList.remove('panel-open'); el.panelBody.replaceChildren(); }
+  function stepPanel(d) { if (!S.panel) return; S.panel.i = Math.max(0, Math.min(S.panel.list.length - 1, S.panel.i + d)); renderPanel(); }
+  function closePanel(byUser) {
+    if (byUser && S.conv) S.panelDismissed.add(S.conv.id);
+    S.panel = null; el.panel.hidden = true; body.classList.remove('panel-open'); el.panelBody.replaceChildren();
+  }
+  /** 답변이 끝났을 때 새 결과물이 있으면 넓은 화면에서 자동으로 연다 (사용자가 이 대화에서 닫았다면 열지 않음) */
+  function autoOpenArtifact(m) {
+    if (!S.conv || S.panelDismissed.has(S.conv.id) || !window.matchMedia('(min-width: 1101px)').matches) return;
+    const list = artifactsOf(S.conv);
+    const idx = list.map((a) => a.msgId).lastIndexOf(m.id);
+    if (idx >= 0) openPanel(null, null, { index: idx });
+  }
 
   /* ================= 시트: 모델 / 설정 ================= */
   function openModelSheet() {
@@ -647,12 +696,26 @@
         break;
       }
       case 'more-sources': if (msg) { S.openSources.has(msg.id) ? S.openSources.delete(msg.id) : S.openSources.add(msg.id); rerenderMsg(msg); } break;
-      case 'panel-close': closePanel(); break;
-      case 'panel-copy': if (S.panel) { toast((await copyText(S.panel.code)) ? '코드를 복사했어요' : '복사하지 못했어요'); } break;
+      case 'panel-close': closePanel(true); break;
+      case 'panel-prev': stepPanel(-1); break;
+      case 'panel-next': stepPanel(1); break;
+      case 'panel-copy': if (S.panel) { toast((await copyText(S.panel.list[S.panel.i].code)) ? '코드를 복사했어요' : '복사하지 못했어요'); } break;
       case 'copy-msg': if (msg) { const ok = await copyText(msg.content); a.innerHTML = ok ? I.check : I.copy; setTimeout(() => (a.innerHTML = I.copy), 1400); } break;
       case 'edit-msg': if (msg && !S.busy) startEdit(msg.id); break;
       case 'edit-cancel': S.editing = null; renderThread(); break;
       case 'retry': if (msg && !S.busy) regenerate(msg.id); break;
+      case 'retry-model': {
+        if (!msg || S.busy) break;
+        const cur = Store.settings.model;
+        const { box, close } = openLayer('menu', `<div class="menu__label">다른 모델로 다시 생성</div>` + API.MODELS.map((x) => `<button role="menuitemradio" aria-checked="${x.id === cur}" data-rm="${x.id}">${esc(x.name)}${x.id === cur ? ' <small>· 지금</small>' : ''}</button>`).join(''), { anchor: a, label: '다른 모델로 다시 생성' });
+        box.addEventListener('click', (ev) => {
+          const o = ev.target.closest('[data-rm]'); if (!o) return;
+          close();
+          if (o.dataset.rm !== cur) Store.saveSettings({ model: o.dataset.rm });
+          regenerate(msg.id);
+        });
+        break;
+      }
       case 'feedback':
         if (msg) {
           msg.feedback = msg.feedback === a.dataset.v ? null : a.dataset.v;
@@ -678,7 +741,7 @@
     if (e.key === 'Escape') {
       if (layers.length) { layers[layers.length - 1](); return; }
       if (S.busy && document.activeElement === el.input) { stop(); return; }
-      if (S.panel) { closePanel(); return; }
+      if (S.panel) { closePanel(true); return; }
       if (body.classList.contains('nav-open')) { closeNav(); return; }
     }
   });
