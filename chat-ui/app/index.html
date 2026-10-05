@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2f4f6">
+<title>모아</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<script>
+  // 저장된 테마를 첫 페인트 전에 적용 (깜빡임 방지)
+  try { const t = JSON.parse(localStorage.getItem('moa.settings.v1') || '{}').theme; if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (_) {}
+</script>
+</head>
+<body class="is-empty">
+<div class="app">
+  <aside class="side" id="side" aria-label="대화 목록">
+    <div class="brand">
+      <b><i class="logo">모</i>모아</b>
+      <button class="icon-btn desktop-only" data-action="toggle-nav" aria-label="사이드바 접기" title="사이드바 접기"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12.5 5l-5 5 5 5"/></svg></button>
+    </div>
+    <button class="cta" data-action="new-chat"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>새 대화 시작하기</button>
+    <label class="search">
+      <span class="sr-only">대화 검색</span>
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4" stroke-linecap="round"/></svg>
+      <input id="search" type="search" placeholder="대화 검색  (Ctrl K)" autocomplete="off">
+    </label>
+    <nav class="convs" id="convs" aria-label="최근 대화"></nav>
+    <button class="me" data-action="settings" aria-label="설정 열기">
+      <span class="me__av" id="me-av">나</span>
+      <span><span class="me__name" id="me-name">내 계정</span><span class="me__plan"><i class="dot" id="live-dot"></i><span id="me-plan">데모 모드</span></span></span>
+      <svg class="gear" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1L4.7 4.7" stroke-linecap="round"/></svg>
+    </button>
+  </aside>
+  <div class="scrim" data-action="close-nav"></div>
+
+  <main class="main" id="main">
+    <header class="head">
+      <button class="icon-btn" data-action="toggle-nav" aria-label="메뉴" title="메뉴"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13"/></svg></button>
+      <button class="head__title" id="title" data-action="rename-current" title="이름 바꾸기">새 대화</button>
+      <button class="pill" data-action="model" aria-haspopup="dialog"><span id="model-label">모아 깊게</span><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 8l5 5 5-5"/></svg></button>
+      <button class="icon-btn" data-action="conv-menu" aria-label="대화 메뉴" aria-haspopup="menu"><svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><circle cx="4.5" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="15.5" cy="10" r="1.6"/></svg></button>
+    </header>
+
+    <div class="scroll" id="scroll">
+      <div class="thread" id="thread" aria-live="polite"></div>
+    </div>
+
+    <section class="welcome" id="welcome">
+      <div class="welcome__in">
+        <h1 id="greeting">안녕하세요,<br><em>무엇이든</em> 물어보세요</h1>
+        <p class="welcome__lead">복잡한 내용도 쉽게 풀어서 알려드릴게요.</p>
+        <button class="notice" id="demo-notice" data-action="settings">
+          <span class="tile" style="background:var(--sheet)">🔑</span>
+          <span><b>지금은 데모 모드예요</b><small>Anthropic API 키를 연결하면 Claude가 실제로 답해요</small></span>
+          <svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg>
+        </button>
+        <div class="section-label">이런 걸 많이 물어봐요</div>
+        <div class="rows">
+          <button class="row" data-suggest="이번 주 회의록을 3줄로 요약하고 담당자별 할 일을 표로 정리해줘"><span class="tile" style="background:var(--blue-weak)">📝</span><span><b>회의록 요약하기</b><small>긴 글을 핵심만, 할 일은 표로</small></span><svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>
+          <button class="row" data-suggest="쿠폰 받기 버튼이 있는 프로모션 카드를 HTML로 만들어줘"><span class="tile" style="background:var(--t-purple)">🎨</span><span><b>화면 만들어 보기</b><small>HTML을 만들고 바로 미리보기</small></span><svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>
+          <button class="row" data-suggest="월급 300만원일 때 저축 계획 세워줘"><span class="tile" style="background:var(--t-yellow)">💰</span><span><b>저축 계획 세우기</b><small>월급과 고정지출로 비율 추천</small></span><svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>
+          <button class="row" data-suggest="부산 1박 2일 여행 일정 짜줘"><span class="tile" style="background:var(--t-green)">🧳</span><span><b>여행 일정 짜기</b><small>날짜와 지역만 알려주세요</small></span><svg class="chev" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5l5 5-5 5"/></svg></button>
+        </div>
+      </div>
+    </section>
+
+    <button class="to-bottom" id="to-bottom" data-action="to-bottom" aria-label="맨 아래로" hidden><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M5 11l5 5 5-5"/></svg></button>
+
+    <div class="dock">
+      <div class="dock__in">
+        <div class="quick">
+          <button data-suggest="이 문장을 더 자연스럽게 고쳐줘: ">문장 다듬기</button>
+          <button data-suggest="영어로 번역해줘: ">번역하기</button>
+          <button data-suggest="정중한 업무 메일 초안 써줘. 내용: ">메일 쓰기</button>
+          <button data-suggest="초등학생도 이해하게 설명해줘: ">쉽게 설명</button>
+        </div>
+        <form class="composer" id="composer">
+          <div class="attach-list" id="attach-list" hidden></div>
+          <div class="composer__row">
+            <button type="button" class="icon-btn" data-action="attach" aria-label="이미지 첨부" title="이미지 첨부"><svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 4.5v11M4.5 10h11"/></svg></button>
+            <label class="sr-only" for="input">메시지</label>
+            <textarea id="input" rows="1" placeholder="모아에게 물어보기" enterkeyhint="send"></textarea>
+            <button type="submit" class="send" id="send" aria-label="보내기" disabled>
+              <svg class="i-up" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15.5v-11M5.5 9L10 4.5 14.5 9"/></svg>
+              <svg class="i-stop" width="13" height="13" viewBox="0 0 12 12" fill="currentColor"><rect width="12" height="12" rx="3"/></svg>
+            </button>
+          </div>
+          <input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+        </form>
+        <p class="fine">모아의 답변은 틀릴 수 있어요. 중요한 정보는 꼭 다시 확인하세요.</p>
+      </div>
+    </div>
+  </main>
+
+  <aside class="panel" id="panel" aria-label="미리보기" hidden>
+    <header class="panel__head">
+      <div class="panel__title"><b id="panel-title">미리보기</b><small id="panel-sub">HTML</small></div>
+      <div class="seg" role="tablist" aria-label="보기 전환">
+        <button role="tab" aria-selected="true" data-tab="preview">미리보기</button>
+        <button role="tab" aria-selected="false" data-tab="code">코드</button>
+      </div>
+      <button class="icon-btn icon-btn--sm" data-action="panel-copy" aria-label="코드 복사" title="코드 복사"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/></svg></button>
+      <button class="icon-btn icon-btn--sm" data-action="panel-close" aria-label="미리보기 닫기" title="닫기 (Esc)"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+    </header>
+    <div class="panel__body" id="panel-body"></div>
+  </aside>
+</div>
+
+<div id="layer"></div>
+
+<script src="js/markdown.js"></script>
+<script src="js/store.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
