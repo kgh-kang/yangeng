@@ -7,6 +7,15 @@
     "test:md": "node tests/markdown.fuzz.js",
     "test:prepare": "bash tests/prepare.sh",
     "test:e2e": "SDK_BUNDLE=tests/.cache/sdk.bundle.mjs KATEX_FILE=tests/.cache/katex.min.js node tests/e2e.js",
-    "test": "npm run test:md && npm run test:e2e"
+    "test": "npm run test:md && npm run test:e2e && npm run test:server",
+    "start": "node server/server.mjs",
+    "test:server": "SDK_BUNDLE=tests/.cache/sdk.bundle.mjs node tests/server.e2e.js"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

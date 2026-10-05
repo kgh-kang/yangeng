@@ -371,7 +371,7 @@ const tests = {
     assert((await p.inputValue('#set-key')) === 'sk-ant-temp', '키 입력');
     await p.uncheck('#set-remember');
     await p.click('#settings-form .btn--blue');
-    const stored = await p.evaluate(() => [JSON.parse(localStorage.getItem('moa.settings.v1')).apiKey, sessionStorage.getItem('moa.key.session.v1')]);
+    const stored = await p.evaluate(() => [JSON.parse(localStorage.getItem('moa.settings.v1')).apiKey, JSON.parse(sessionStorage.getItem('moa.key.session.v1')).apiKey]);
     assert(stored[0] === '' && stored[1] === 'sk-ant-temp', `키는 세션에만 (${stored})`);
     assert((await p.textContent('#me-plan')) === 'Claude 연결됨', '연결 표시');
     await p.reload();

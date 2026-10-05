@@ -45,9 +45,12 @@
   }
 
   function friendlyError(err, Anthropic) {
+    // server: 아래 detectServer가 채우는 모듈 변수 (서버 모드면 401은 비밀번호 문제)
     if (Anthropic) {
       if (err instanceof Anthropic.APIUserAbortError) return { aborted: true };
-      if (err instanceof Anthropic.AuthenticationError) return { message: 'API 키가 올바르지 않아요. 설정에서 키를 다시 확인해 주세요.', fix: 'settings' };
+      if (err instanceof Anthropic.AuthenticationError) return server
+        ? { message: '접속 비밀번호가 올바르지 않아요. 설정에서 다시 입력해 주세요.', fix: 'settings' }
+        : { message: 'API 키가 올바르지 않아요. 설정에서 키를 다시 확인해 주세요.', fix: 'settings' };
       if (err instanceof Anthropic.PermissionDeniedError) return { message: '이 API 키로는 선택한 모델을 쓸 수 없어요. 다른 모델을 골라 보세요.', fix: 'model' };
       if (err instanceof Anthropic.RateLimitError) return { message: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.' };
       if (err instanceof Anthropic.BadRequestError) return { message: `요청을 처리하지 못했어요: ${err.message}` };
@@ -63,7 +66,10 @@
     let mod;
     try { mod = await loadSdk(); } catch (e) { throw Object.assign(new Error('sdk'), { friendly: friendlyError(e) }); }
     const Anthropic = mod.default;
-    const client = new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
+    // 서버 모드: 키는 서버에만 있고, 요청은 서버(/api/anthropic)를 거친다. 브라우저 키 모드: Anthropic API로 직접.
+    const client = server
+      ? new Anthropic({ apiKey: 'server-managed', baseURL: new URL('/api/anthropic', location.href).href, dangerouslyAllowBrowser: true, defaultHeaders: { 'x-moa-password': settings.serverPassword || '' } })
+      : new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
     const info = modelInfo(settings.model);
     const params = { model: info.id, max_tokens: 64000, messages: toApiMessages(messages) };
     if (settings.system && settings.system.trim()) params.system = settings.system.trim();
@@ -185,12 +191,30 @@
     return { input: input + write + read, cached: read, output, searches, cost };
   }
 
+  /* ---------- 서버 모드 감지: 모아 서버(server/server.mjs)로 열었으면 /api/config 가 응답한다 ---------- */
+  let server = null;
+  async function detectServer() {
+    if (!/^https?:$/.test(location.protocol)) return null;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 2500);
+      const r = await fetch(new URL('/api/config', location.href), { cache: 'no-store', signal: ctrl.signal });
+      clearTimeout(t);
+      if (!r.ok || !(r.headers.get('content-type') || '').includes('json')) return null;
+      const cfg = await r.json();
+      if (cfg && cfg.mode === 'server') server = { passwordRequired: !!cfg.passwordRequired };
+    } catch (_) { /* 정적 호스팅이면 없음 */ }
+    return server;
+  }
+
   window.MoaAPI = {
+    detectServer,
+    get server() { return server; },
     summarizeUsage,
     MODELS,
     modelInfo,
     toApiMessages,
-    isLive: (settings) => !!(settings.apiKey && settings.apiKey.trim()),
+    isLive: (settings) => (server ? !server.passwordRequired || !!(settings.serverPassword || '').trim() : !!(settings.apiKey && settings.apiKey.trim())),
     respond(opts) { return window.MoaAPI.isLive(opts.settings) ? claude(opts) : demo(opts); },
   };
 })();

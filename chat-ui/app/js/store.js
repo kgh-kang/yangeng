@@ -3,7 +3,7 @@
   const K_CONVS = 'moa.convs.v1';
   const K_SETTINGS = 'moa.settings.v1';
   const K_SESSION_KEY = 'moa.key.session.v1';
-  const DEFAULTS = { name: '', apiKey: '', rememberKey: true, model: 'claude-opus-5-5', effort: 'medium', system: '', theme: 'system', webSearch: false };
+  const DEFAULTS = { name: '', apiKey: '', serverPassword: '', rememberKey: true, model: 'claude-opus-5-5', effort: 'medium', system: '', theme: 'system', webSearch: false };
 
   const read = (k, fallback) => {
     try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (_) { return fallback; }
@@ -56,7 +56,9 @@
   /** rememberKey가 꺼져 있으면 API 키는 이 탭(sessionStorage)에만 둔다 */
   function loadSettings() {
     const st = Object.assign({}, DEFAULTS, read(K_SETTINGS, {}));
-    if (!st.rememberKey) { try { st.apiKey = sessionStorage.getItem(K_SESSION_KEY) || ''; } catch (_) { st.apiKey = ''; } }
+    if (!st.rememberKey) {
+      try { const sess = JSON.parse(sessionStorage.getItem(K_SESSION_KEY) || '{}'); st.apiKey = sess.apiKey || ''; st.serverPassword = sess.serverPassword || ''; } catch (_) { st.apiKey = ''; st.serverPassword = ''; }
+    }
     return st;
   }
   let settings = loadSettings();
@@ -92,8 +94,8 @@
       const toSave = Object.assign({}, settings);
       try {
         if (settings.rememberKey) sessionStorage.removeItem(K_SESSION_KEY);
-        else { sessionStorage.setItem(K_SESSION_KEY, settings.apiKey || ''); toSave.apiKey = ''; }
-      } catch (_) { if (!settings.rememberKey) toSave.apiKey = ''; }
+        else { sessionStorage.setItem(K_SESSION_KEY, JSON.stringify({ apiKey: settings.apiKey || '', serverPassword: settings.serverPassword || '' })); toSave.apiKey = ''; toSave.serverPassword = ''; }
+      } catch (_) { if (!settings.rememberKey) { toSave.apiKey = ''; toSave.serverPassword = ''; } }
       try { localStorage.setItem(K_SETTINGS, JSON.stringify(toSave)); } catch (_) {}
       emit('settings');
     },
@@ -121,7 +123,7 @@
     clearAll() { convs.forEach((c) => removed.add(c.id)); convs = []; persist(); emit('convs'); },
     /** 백업 파일 내용 (API 키는 넣지 않는다) */
     backup() {
-      const { apiKey, ...safe } = settings;
+      const { apiKey, serverPassword, ...safe } = settings;
       return JSON.stringify({ app: 'moa', version: 1, exportedAt: new Date().toISOString(), settings: safe, conversations: convs }, null, 1);
     },
     /** 백업 복원: 같은 id는 더 최근 것으로, 새 대화는 추가. 반환: 추가·갱신된 대화 수 */

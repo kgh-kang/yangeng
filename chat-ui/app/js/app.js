@@ -98,9 +98,11 @@
     el.modelLabel.textContent = API.modelInfo(st.model).name;
     el.meName.textContent = st.name ? `${st.name}` : '내 계정';
     el.meAv.textContent = (st.name || '나').slice(0, 1);
-    el.mePlan.textContent = live ? 'Claude 연결됨' : '데모 모드';
+    el.mePlan.textContent = API.server ? (live ? '서버 연결됨' : '비밀번호 필요') : live ? 'Claude 연결됨' : '데모 모드';
     el.liveDot.classList.toggle('is-live', live);
     el.demoNotice.hidden = live;
+    el.demoNotice.querySelector('b').textContent = API.server ? '접속 비밀번호를 입력해 주세요' : '지금은 데모 모드예요';
+    el.demoNotice.querySelector('small').textContent = API.server ? '비밀번호를 넣으면 이 서버를 통해 Claude가 답해요' : 'Anthropic API 키를 연결하면 Claude가 실제로 답해요';
     $$('[data-action="toggle-search"]').forEach((b) => b.setAttribute('aria-pressed', String(!!st.webSearch)));
     el.greeting.innerHTML = `${st.name ? esc(st.name) + '님,' : '안녕하세요,'}<br><em>무엇이든</em> 물어보세요`;
     el.title.textContent = (S.conv && S.conv.title) || '새 대화';
@@ -499,10 +501,10 @@
     const seg = (name, opts, cur) => `<div class="seg seg--full" role="radiogroup" aria-label="${name}">${opts.map(([v, l]) => `<button type="button" role="radio" data-seg="${name}" data-v="${v}" aria-checked="${v === cur}">${l}</button>`).join('')}</div>`;
     const { box, close } = openLayer('sheet', `<form id="settings-form"><h2>설정</h2><p class="sheet__lead">모든 설정과 대화는 이 브라우저에만 저장돼요</p>
       <label class="field"><span class="field__label">이름</span><input class="input" id="set-name" maxlength="20" value="${esc(st.name)}" placeholder="인사말에 쓸 이름" autocomplete="nickname"></label>
-      <div class="field"><label class="field__label" for="set-key">Anthropic API 키 <small>${API.isLive(st) ? '연결됨' : '없으면 데모 모드'}</small></label>
-        <div class="input-wrap"><input class="input" id="set-key" type="password" value="${esc(st.apiKey)}" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"><button type="button" data-toggle-key>보기</button></div>
-        <label class="check-row"><input type="checkbox" id="set-remember" ${st.rememberKey ? 'checked' : ''}><span>이 기기에 키 기억하기 <small>끄면 탭을 닫을 때 키가 지워져요</small></span></label>
-        <p class="hint">키는 이 브라우저에만 저장되고 Anthropic API로만 전송돼요. 개인용으로만 쓰고, 여러 사람이 쓰는 서비스라면 키를 서버에 두세요. 키는 <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Claude Console</a>에서 만들 수 있어요.</p></div>
+      ${API.server ? `<div class="field"><span class="field__label">연결 <small>서버 모드</small></span><p class="server-note">이 서버가 Claude API 키를 대신 관리해요. 키를 넣을 필요가 없어요.</p>${API.server.passwordRequired ? `<label class="field__label" for="set-pass" style="margin-top:12px">접속 비밀번호</label><div class="input-wrap"><input class="input" id="set-pass" type="password" value="${esc(st.serverPassword)}" placeholder="관리자에게 받은 비밀번호" autocomplete="current-password"><button type="button" data-toggle-key>보기</button></div>` : ''}` : `<div class="field"><label class="field__label" for="set-key">Anthropic API 키 <small>${API.isLive(st) ? '연결됨' : '없으면 데모 모드'}</small></label>
+        <div class="input-wrap"><input class="input" id="set-key" type="password" value="${esc(st.apiKey)}" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"><button type="button" data-toggle-key>보기</button></div>`}
+        ${!API.server || API.server.passwordRequired ? `<label class="check-row"><input type="checkbox" id="set-remember" ${st.rememberKey ? 'checked' : ''}><span>이 기기에 ${API.server ? '비밀번호' : '키'} 기억하기 <small>끄면 탭을 닫을 때 지워져요</small></span></label>` : ''}
+        ${API.server ? '' : '<p class="hint">키는 이 브라우저에만 저장되고 Anthropic API로만 전송돼요. 개인용으로만 쓰고, 여러 사람이 쓰는 서비스라면 키를 서버에 두세요(server/server.mjs). 키는 <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Claude Console</a>에서 만들 수 있어요.</p>'}</div>
       <div class="field"><span class="field__label">답변 깊이 <small>Haiku에는 적용되지 않아요</small></span>${seg('effort', effort, st.effort)}</div>
       <label class="field"><span class="field__label">맞춤 지침 <small>모든 대화에 적용</small></span><textarea class="input" id="set-system" maxlength="4000" placeholder="예) 항상 존댓말로, 핵심부터 짧게 답해줘">${esc(st.system)}</textarea></label>
       <div class="field"><span class="field__label">화면 테마</span>${seg('theme', theme, st.theme)}</div>
@@ -513,7 +515,7 @@
       const s = e.target.closest('[data-seg]');
       if (s) $$(`[data-seg="${s.dataset.seg}"]`, box).forEach((b) => b.setAttribute('aria-checked', String(b === s)));
       if (e.target.closest('[data-toggle-key]')) {
-        const k = $('#set-key', box); const show = k.type === 'password';
+        const k = $('#set-key, #set-pass', box); const show = k.type === 'password';
         k.type = show ? 'text' : 'password'; e.target.textContent = show ? '숨기기' : '보기';
       }
       if (e.target.closest('[data-close-sheet]')) close();
@@ -544,15 +546,16 @@
       const wasLive = API.isLive(Store.settings);
       Store.saveSettings({
         name: $('#set-name', box).value.trim(),
-        apiKey: $('#set-key', box).value.trim(),
-        rememberKey: $('#set-remember', box).checked,
+        apiKey: $('#set-key', box) ? $('#set-key', box).value.trim() : Store.settings.apiKey,
+        serverPassword: $('#set-pass', box) ? $('#set-pass', box).value : Store.settings.serverPassword,
+        rememberKey: $('#set-remember', box) ? $('#set-remember', box).checked : Store.settings.rememberKey,
         system: $('#set-system', box).value,
         effort: get('effort') || 'medium',
         theme: get('theme') || 'system',
       });
       close();
       const live = API.isLive(Store.settings);
-      toast(live && !wasLive ? 'Claude에 연결했어요' : !live && wasLive ? '데모 모드로 바꿨어요' : '설정을 저장했어요');
+      toast(live && !wasLive ? (API.server ? '서버에 연결했어요' : 'Claude에 연결했어요') : !live && wasLive ? (API.server ? '비밀번호를 지웠어요' : '데모 모드로 바꿨어요') : '설정을 저장했어요');
     });
   }
 
@@ -713,6 +716,7 @@
   else { renderChrome(); renderSidebar(); renderThread(); }
   syncInput();
   if (!mobileMQ.matches) el.input.focus();
+  API.detectServer().then((srv) => { if (srv) renderChrome(); });
 
   window.Moa = { openPanel, toast, state: S };
 })();

@@ -12,7 +12,14 @@ npm run test:prepare     # 테스트용 SDK 번들·KaTeX 준비 (최초 1회, n
 npm test                 # 렌더러 보안·성능 테스트 + E2E (서버가 떠 있어야 함, Playwright 필요)
 ```
 
-- API 키가 없으면 **데모 모드**로 동작합니다(미리 준비된 답변).
+**여러 사람이 쓰게 하려면 서버 모드**로 띄우세요. 키는 서버에만 있고 브라우저로 내려가지 않습니다.
+
+```bash
+cd chat-ui && npm install
+ANTHROPIC_API_KEY=sk-ant-... APP_PASSWORD=정한-비밀번호 npm start   # http://localhost:8780/
+```
+
+- 서버 없이 파일만 열면(정적 호스팅) API 키가 없을 때 **데모 모드**로 동작합니다(미리 준비된 답변).
 - 설정에서 Anthropic API 키를 넣으면 공식 SDK(`@anthropic-ai/sdk`, 브라우저 ESM 빌드)로 Claude와 스트리밍 대화합니다.
   키는 그 브라우저에만 저장됩니다("이 기기에 키 기억하기"를 끄면 탭을 닫을 때 지워짐). **개인용·프로토타입용** 구성이며, 여러 사용자가 쓰는 서비스는 키를 서버에 두고 같은 요청을 서버에서 보내야 합니다.
 - E2E는 CDN(SDK·KaTeX)과 Anthropic API 요청을 테스트가 가로채 로컬 파일·가짜 응답으로 대신합니다. 네트워크 없이도 실제 SDK의 스트리밍·오류 처리 경로를 검증합니다.
@@ -31,6 +38,8 @@ npm test                 # 렌더러 보안·성능 테스트 + E2E (서버가 �
 | `app/js/app.js` | 화면 렌더링, 대화 흐름, 패널, 설정, 단축키 |
 | `tests/markdown.fuzz.js` | 렌더러 XSS·ReDoS·수식 판별 테스트 (node) |
 | `tests/e2e.js` | E2E 테스트 (Playwright) |
+| `server/server.mjs` | (선택) 서버 모드: 앱 제공 + Claude API 중계 (키 보관, 허용 목록, 비밀번호, 속도 제한) |
+| `tests/server.e2e.js` | 서버 모드 E2E (가짜 Anthropic API + 실제 서버 + 브라우저) |
 | `tests/prepare.sh` | 테스트용 SDK 번들·KaTeX 준비 |
 
 ---
@@ -217,3 +226,27 @@ npm test                 # 렌더러 보안·성능 테스트 + E2E (서버가 �
 **재현 가능한 테스트**: `npm run test:prepare`(SDK를 esbuild로 묶고 KaTeX를 받음) → `npm test`. 깨끗한 상태에서 다시 준비해 33개 통과 확인.
 
 **검증**: E2E 33개(포커스 가두기 추가) + 렌더러 테스트, axe serious 이상 0건
+
+## 라운드 10 — 서버 모드 (키를 브라우저에서 빼기)
+
+**평가**: 지금까지는 API 키를 브라우저에 넣는 구조라 개인용으로만 안전했다. "팀이나 학생들에게 링크를 나눠 주고 싶다"는 순간 막힌다. 남은 빈 곳 가운데 가장 큰 것이라고 판단했다.
+
+**설계**
+- `server/server.mjs`(Node 18+, 의존성은 공식 SDK 하나): 앱 정적 파일 + `/api/config` + `/api/anthropic/v1/messages`
+- 서버는 공식 SDK의 `beta.messages.stream()`으로 Claude를 호출하고 이벤트를 SSE로 그대로 다시 내보낸다 → 브라우저 SDK는 `baseURL`만 서버로 바꾸면 스트리밍·오류 처리가 그대로 동작
+- 앱은 시작할 때 `/api/config`가 응답하면 서버 모드로 전환(키 입력칸 대신 접속 비밀번호 칸). 정적 호스팅·파일로 열면 기존처럼 브라우저 키/데모 모드
+
+**남용 방지**
+| 장치 | 내용 |
+|---|---|
+| 키 보관 | `ANTHROPIC_API_KEY`는 서버 환경변수에만. 브라우저 요청의 `x-api-key`는 무시 |
+| 접속 비밀번호 | `APP_PASSWORD` (해시 후 timing-safe 비교). 없으면 시작할 때 경고 |
+| 허용 목록 | 모델 3종, 파라미터(model·max_tokens·messages·system·output_config·thinking·cache_control·tools·fallbacks), 도구는 웹 검색만(max_uses ≤ 5), 베타 헤더는 폴백만 |
+| 상한 | `MAX_TOKENS`(기본 64000), 요청 본문 32MB |
+| 속도 제한 | IP당 분당 `RATE_LIMIT`(기본 20)회. 429에 `x-should-retry: false`를 붙여 브라우저 SDK가 자동 재시도로 더 두드리지 않게 |
+| 중지 전달 | 브라우저가 중지하면 서버도 위쪽 요청을 끊음 |
+| 정적 파일 | `app/` 밖 경로 차단, `nosniff`·`no-referrer` |
+
+**검증**: 서버 모드 E2E 6개 (키가 페이지·브라우저 요청에 없음, 틀린 비밀번호는 위쪽 요청 없이 거절, 허용 목록 위반 400, max_tokens 상한, 경로 탈출 차단, 속도 제한과 재시도 없음) + 기존 33개 + 렌더러 테스트 모두 통과
+
+**배포 메모**: 서버 모드는 Node가 도는 곳(Render, Fly.io, Railway, 사내 서버 등)에 `npm start`로 띄우면 된다. 속도 제한은 메모리 기반이라 인스턴스를 여러 개 띄우면 각자 따로 센다.
