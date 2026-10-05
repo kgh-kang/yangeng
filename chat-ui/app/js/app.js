@@ -171,9 +171,12 @@
 
   /* ================= 메시지 렌더링 ================= */
   function userHTML(m) {
-    const imgs = (m.images || []).length
-      ? `<div class="imgs">${m.images.map((i) => (i.data ? `<img src="data:${i.mediaType};base64,${i.data}" alt="${esc(i.name || '첨부 이미지')}" loading="lazy">` : '<div class="gone">저장 공간이 부족해 이미지를 지웠어요</div>')).join('')}</div>`
-      : '';
+    const files = m.files || [];
+    const pics = files.filter((f) => f.kind === 'image');
+    const docs = files.filter((f) => f.kind !== 'image');
+    const imgs = (pics.length
+      ? `<div class="imgs">${pics.map((i) => (i.data ? `<img src="data:${i.mediaType};base64,${i.data}" alt="${esc(i.name || '첨부 이미지')}" loading="lazy">` : '<div class="gone">저장 공간이 부족해 이미지를 지웠어요</div>')).join('')}</div>`
+      : '') + (docs.length ? `<div class="fchips">${docs.map((f) => fileChip(f)).join('')}</div>` : '');
     if (S.editing === m.id) {
       return `${imgs}<form class="edit" data-edit-form="${m.id}"><label class="sr-only" for="edit-${m.id}">메시지 수정</label><textarea id="edit-${m.id}">${esc(m.content)}</textarea><div class="edit__btns"><button type="button" class="btn" data-action="edit-cancel">취소</button><button class="btn btn--blue">보내기</button></div></form>`;
     }
@@ -199,7 +202,7 @@
     else if (m.pending && !m.thinkStart) h += '<span class="typing" aria-label="답변 작성 중"><i></i><i></i><i></i></span>';
     if ((m.sources || []).length && !m.pending) h += sourcesHTML(m);
     if (m.stopped) h += '<div class="note">답변을 중간에 멈췄어요.</div>';
-    if (m.truncated) h += '<div class="note">답변이 너무 길어서 여기까지만 받았어요. “이어서 써줘”라고 보내 보세요.</div>';
+    if (m.truncated) h += `<div class="note note--row">답변이 너무 길어서 여기까지만 받았어요.${m.pending ? '' : '<button class="btn btn--weak" data-action="continue">이어서 쓰기</button>'}</div>`;
     if (m.error) {
       const fix = m.fix === 'settings' ? '<button class="btn btn--weak" data-action="settings">설정 열기</button>' : m.fix === 'model' ? '<button class="btn btn--weak" data-action="model">모델 바꾸기</button>' : '';
       h += `<div class="err" role="alert">${I.alert}<span>${esc(m.error)}</span>${fix}<button class="btn btn--weak" data-action="retry">다시 시도</button></div>`;
@@ -319,48 +322,56 @@
     } catch (_) { rec = null; toast('음성 입력을 시작하지 못했어요'); }
   }
 
-  /* ================= 이미지 첨부 ================= */
-  const OK_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-  /** 긴 변 1568px 이하로 줄여 저장 공간과 토큰을 아낀다 (Claude 권장 크기). */
-  function readImage(file) {
-    return new Promise((resolve, reject) => {
-      if (!OK_TYPES.includes(file.type)) return reject(new Error('PNG, JPG, GIF, WEBP 이미지만 올릴 수 있어요.'));
-      const fr = new FileReader();
-      fr.onerror = () => reject(new Error('이미지를 읽지 못했어요.'));
-      fr.onload = () => {
-        const img = new Image();
-        img.onerror = () => reject(new Error('이미지를 열지 못했어요.'));
-        img.onload = () => {
-          const MAX = 1568;
-          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-          if (scale === 1 && file.size < 1.5e6 && file.type !== 'image/gif') {
-            return resolve({ name: file.name, mediaType: file.type, data: String(fr.result).split(',')[1] });
-          }
-          if (file.type === 'image/gif' && scale === 1) return resolve({ name: file.name, mediaType: file.type, data: String(fr.result).split(',')[1] });
-          const cv = document.createElement('canvas');
-          cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
-          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-          const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-          const url = cv.toDataURL(type, 0.86);
-          resolve({ name: file.name, mediaType: type, data: url.split(',')[1] });
-        };
-        img.src = fr.result;
-      };
-      fr.readAsDataURL(file);
-    });
+  /* ================= 첨부: 이미지 · PDF · 텍스트 파일 ================= */
+  const IMG_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+  const TEXT_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|xml|html?|css|scss|js|mjs|cjs|jsx|ts|tsx|py|java|kt|go|rs|c|h|cpp|hpp|cs|rb|php|swift|sql|sh|bash|zsh|log|ini|toml|env|conf)$/i;
+  const LIMIT = { pdf: 20 * 1024 * 1024, text: 500 * 1024 };
+  const kindOf = (f) => (IMG_TYPES.includes(f.type) ? 'image' : f.type === 'application/pdf' || /\.pdf$/i.test(f.name) ? 'pdf' : f.type.startsWith('text/') || TEXT_EXT.test(f.name) ? 'text' : null);
+  const sizeLabel = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB');
+  const readAs = (file, how) => new Promise((res, rej) => { const fr = new FileReader(); fr.onerror = () => rej(new Error(`${file.name}을(를) 읽지 못했어요.`)); fr.onload = () => res(fr.result); fr[how](file); });
+
+  /** 이미지는 긴 변 1568px 이하로 줄여 저장 공간과 토큰을 아낀다 (Claude 권장 크기). */
+  async function readImage(file) {
+    const url = await readAs(file, 'readAsDataURL');
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error(`${file.name} 이미지를 열지 못했어요.`)); i.src = url; });
+    const scale = Math.min(1, 1568 / Math.max(img.width, img.height));
+    if (scale === 1 && (file.size < 1.5e6 || file.type === 'image/gif')) return { kind: 'image', name: file.name, mediaType: file.type, data: String(url).split(',')[1], size: file.size };
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const data = cv.toDataURL(type, 0.86).split(',')[1];
+    return { kind: 'image', name: file.name, mediaType: type, data, size: Math.round(data.length * 0.75) };
+  }
+  async function readFile(file) {
+    const kind = kindOf(file);
+    if (!kind) throw new Error(`${file.name}: 이미지, PDF, 텍스트·코드 파일만 첨부할 수 있어요.`);
+    if (kind === 'image') return readImage(file);
+    if (file.size > LIMIT[kind]) throw new Error(`${file.name}: ${kind === 'pdf' ? 'PDF는 20MB' : '텍스트 파일은 500KB'}까지 올릴 수 있어요.`);
+    if (kind === 'pdf') return { kind, name: file.name, mediaType: 'application/pdf', data: String(await readAs(file, 'readAsDataURL')).split(',')[1], size: file.size };
+    const text = await readAs(file, 'readAsText');
+    if (/\u0000/.test(text.slice(0, 2000))) throw new Error(`${file.name}: 텍스트 파일이 아닌 것 같아요.`);
+    return { kind, name: file.name, mediaType: 'text/plain', text, size: file.size };
   }
   async function addFiles(files) {
-    const imgs = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    if (!imgs.length) { if (files.length) toast('이미지 파일만 첨부할 수 있어요.'); return; }
-    for (const f of imgs) {
-      if (S.attachments.length >= MAX_ATTACH) { toast(`이미지는 한 번에 ${MAX_ATTACH}장까지 보낼 수 있어요.`); break; }
-      try { S.attachments.push(await readImage(f)); } catch (e) { toast(e.message); }
+    for (const f of Array.from(files)) {
+      if (S.attachments.length >= MAX_ATTACH) { toast(`파일은 한 번에 ${MAX_ATTACH}개까지 보낼 수 있어요.`); break; }
+      try { S.attachments.push(await readFile(f)); } catch (e) { toast(e.message); }
     }
     renderAttachments(); syncInput(); el.input.focus();
   }
+  const FILE_ICON = { pdf: ['PDF', 'var(--red-weak)', 'var(--red-fill)'], text: ['TXT', 'var(--fill-strong)', 'var(--sub)'] };
+  function fileChip(f, removeIdx) {
+    const [label, bg, fg] = FILE_ICON[f.kind] || FILE_ICON.text;
+    const ext = (f.name.match(/\.([a-z0-9]{1,4})$/i) || [])[1];
+    const gone = !f.data && !f.text;
+    return `<div class="fchip"><span class="fchip__ic" style="background:${bg};color:${fg}">${esc(f.kind === 'text' && ext ? ext.toUpperCase() : label)}</span><span class="fchip__txt"><b>${esc(f.name)}</b><small>${gone ? '저장 공간이 부족해 원본을 지웠어요' : sizeLabel(f.size || 0)}</small></span>${removeIdx != null ? `<button type="button" data-action="detach" data-i="${removeIdx}" aria-label="${esc(f.name)} 빼기">${I.x}</button>` : ''}</div>`;
+  }
   function renderAttachments() {
     el.attachList.hidden = !S.attachments.length;
-    el.attachList.innerHTML = S.attachments.map((a, i) => `<div class="attach"><img src="data:${a.mediaType};base64,${a.data}" alt="${esc(a.name)}"><button type="button" data-action="detach" data-i="${i}" aria-label="${esc(a.name)} 빼기">${I.x}</button></div>`).join('');
+    el.attachList.innerHTML = S.attachments.map((a, i) => (a.kind === 'image'
+      ? `<div class="attach"><img src="data:${a.mediaType};base64,${a.data}" alt="${esc(a.name)}"><button type="button" data-action="detach" data-i="${i}" aria-label="${esc(a.name)} 빼기">${I.x}</button></div>`
+      : fileChip(a, i))).join('');
   }
   function clearAttachments() { S.attachments = []; renderAttachments(); }
   el.file.addEventListener('change', () => { addFiles(el.file.files); el.file.value = ''; });
@@ -382,12 +393,12 @@
   /* ================= 대화 흐름 ================= */
   function titleFrom(text) {
     const t = text.replace(/\s+/g, ' ').trim();
-    return t.length > 30 ? t.slice(0, 30) + '…' : t || '이미지 질문';
+    return t.length > 30 ? t.slice(0, 30) + '…' : t || '첨부 파일 질문';
   }
   function saveConv(opts, conv = S.conv) {
     if (!conv) return;
     const r = Store.commit(conv, opts);
-    if (r === 'trimmed') toast('저장 공간이 부족해 오래된 대화의 이미지를 지웠어요.');
+    if (r === 'trimmed') toast('저장 공간이 부족해 오래된 대화의 첨부 원본을 지웠어요.');
     if (r === 'failed') toast('저장 공간이 가득 차서 이 대화를 저장하지 못했어요.');
   }
 
@@ -399,7 +410,7 @@
       try { history.replaceState(null, '', '#' + S.conv.id); } catch (_) {}
     }
     const c = S.conv;
-    c.messages.push({ id: Store.uid(), role: 'user', content: text, images: S.attachments.slice(), at: Date.now() });
+    c.messages.push({ id: Store.uid(), role: 'user', content: text, files: S.attachments.slice(), at: Date.now() });
     if (!c.title) c.title = titleFrom(text);
     el.input.value = ''; clearAttachments(); syncInput();
     saveConv();
@@ -490,7 +501,7 @@
     if (i < 0) return;
     const m = S.conv.messages[i];
     S.editing = null;
-    if (!text.trim() && !(m.images || []).length) { renderThread(); return; }
+    if (!text.trim() && !(m.files || []).length) { renderThread(); return; }
     m.content = text.trim();
     S.conv.messages.splice(i + 1);
     saveConv(); renderThread(); toBottom(false);
@@ -578,13 +589,14 @@
       <label class="field"><span class="field__label">이름</span><input class="input" id="set-name" maxlength="20" value="${esc(st.name)}" placeholder="인사말에 쓸 이름" autocomplete="nickname"></label>
       <div class="field"><label class="field__label" for="set-key">Anthropic API 키 <small>${API.isLive(st) ? '연결됨' : '없으면 데모 모드'}</small></label>
         <div class="input-wrap"><input class="input" id="set-key" type="password" value="${esc(st.apiKey)}" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"><button type="button" data-toggle-key>보기</button></div>
+        <label class="check-row"><input type="checkbox" id="set-remember" ${st.rememberKey ? 'checked' : ''}><span>이 기기에 키 기억하기 <small>끄면 탭을 닫을 때 키가 지워져요</small></span></label>
         <p class="hint">키는 이 브라우저에만 저장되고 Anthropic API로만 전송돼요. 개인용으로만 쓰고, 여러 사람이 쓰는 서비스라면 키를 서버에 두세요. 키는 <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Claude Console</a>에서 만들 수 있어요.</p></div>
       <div class="field"><span class="field__label">답변 깊이 <small>Haiku에는 적용되지 않아요</small></span>${seg('effort', effort, st.effort)}</div>
       <label class="field"><span class="field__label">맞춤 지침 <small>모든 대화에 적용</small></span><textarea class="input" id="set-system" maxlength="4000" placeholder="예) 항상 존댓말로, 핵심부터 짧게 답해줘">${esc(st.system)}</textarea></label>
       <div class="field"><span class="field__label">화면 테마</span>${seg('theme', theme, st.theme)}</div>
       <div class="sheet__foot"><button type="button" class="btn" data-close-sheet>닫기</button><button class="btn btn--blue">저장하기</button></div>
       <div class="field"><span class="field__label">데이터 <small>대화 ${Store.list().length}개</small></span><div class="data-btns"><button type="button" class="btn" data-backup>백업 받기</button><button type="button" class="btn" data-restore>백업 불러오기</button></div><p class="hint">백업 파일에는 API 키가 들어가지 않아요.</p><input type="file" accept="application/json,.json" data-restore-file hidden></div>
-      <button type="button" class="danger-link" data-clear-all>모든 대화 삭제</button></form>`, { label: '설정' });
+      <div class="sheet__links"><button type="button" class="link-btn" data-shortcuts>단축키 보기</button><button type="button" class="danger-link" data-clear-all>모든 대화 삭제</button></div></form>`, { label: '설정' });
     box.addEventListener('click', async (e) => {
       const s = e.target.closest('[data-seg]');
       if (s) $$(`[data-seg="${s.dataset.seg}"]`, box).forEach((b) => b.setAttribute('aria-checked', String(b === s)));
@@ -598,6 +610,7 @@
         toast('백업 파일을 받았어요');
       }
       if (e.target.closest('[data-restore]')) $('[data-restore-file]', box).click();
+      if (e.target.closest('[data-shortcuts]')) { close(); openShortcuts(); }
       if (e.target.closest('[data-clear-all]')) {
         close();
         if (await confirmDialog({ title: '모든 대화를 삭제할까요?', text: '삭제한 대화는 되돌릴 수 없어요.', ok: '모두 삭제', danger: true })) {
@@ -620,6 +633,7 @@
       Store.saveSettings({
         name: $('#set-name', box).value.trim(),
         apiKey: $('#set-key', box).value.trim(),
+        rememberKey: $('#set-remember', box).checked,
         system: $('#set-system', box).value,
         effort: get('effort') || 'medium',
         theme: get('theme') || 'system',
@@ -628,6 +642,13 @@
       const live = API.isLive(Store.settings);
       toast(live && !wasLive ? 'Claude에 연결했어요' : !live && wasLive ? '데모 모드로 바꿨어요' : '설정을 저장했어요');
     });
+  }
+
+  function openShortcuts() {
+    const k = isMac ? '⌘' : 'Ctrl';
+    const rows = [[`${k} K`, '대화 검색'], [`${k} Shift O`, '새 대화'], ['Enter', '보내기'], ['Shift Enter', '줄바꿈'], ['↑', '빈 입력창에서 마지막 메시지 수정'], ['Esc', '창 닫기 · 답변 중지'], ['?', '단축키 보기']];
+    const { box, close } = openLayer('dialog', `<h2>단축키</h2><dl class="keys">${rows.map(([a, b]) => `<dt>${a.split(' ').map((x) => `<kbd>${esc(x)}</kbd>`).join(' ')}</dt><dd>${esc(b)}</dd>`).join('')}</dl><div class="dialog__btns"><button class="btn btn--blue" data-ok>확인</button></div>`, { label: '단축키' });
+    box.querySelector('[data-ok]').onclick = close;
   }
 
   /* ================= 대화 메뉴 (이름 변경 · 고정 · 내보내기 · 삭제) ================= */
@@ -704,6 +725,7 @@
       case 'edit-msg': if (msg && !S.busy) startEdit(msg.id); break;
       case 'edit-cancel': S.editing = null; renderThread(); break;
       case 'retry': if (msg && !S.busy) regenerate(msg.id); break;
+      case 'continue': if (!S.busy) { el.input.value = '끊긴 부분부터 이어서 써줘. 앞부분은 반복하지 마.'; submit(); } break;
       case 'retry-model': {
         if (!msg || S.busy) break;
         const cur = Store.settings.model;
@@ -738,6 +760,7 @@
     const mod = isMac ? e.metaKey : e.ctrlKey;
     if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); if (mobileMQ.matches) body.classList.add('nav-open'); else body.classList.remove('nav-collapsed'); el.search.focus(); el.search.select(); return; }
     if (mod && e.shiftKey && e.key.toLowerCase() === 'o') { e.preventDefault(); newChat(); return; }
+    if (e.key === '?' && !layers.length && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); openShortcuts(); return; }
     if (e.key === 'Escape') {
       if (layers.length) { layers[layers.length - 1](); return; }
       if (S.busy && document.activeElement === el.input) { stop(); return; }

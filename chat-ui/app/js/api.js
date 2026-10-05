@@ -25,8 +25,14 @@
       if (m.role === 'assistant' && (!m.content || m.error)) continue;
       let content;
       if (m.role === 'user') {
-        const imgs = (m.images || []).filter((i) => i.data).map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.mediaType, data: i.data } }));
-        content = [...imgs, { type: 'text', text: m.content || '(이미지)' }];
+        // 파일을 먼저, 질문을 뒤에 둔다 (Claude 권장 순서)
+        const files = (m.files || []).map((f) => {
+          if (f.kind === 'image' && f.data) return { type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.data } };
+          if (f.kind === 'pdf' && f.data) return { type: 'document', title: f.name, source: { type: 'base64', media_type: 'application/pdf', data: f.data } };
+          if (f.kind === 'text' && f.text) return { type: 'document', title: f.name, source: { type: 'text', media_type: 'text/plain', data: f.text } };
+          return null;
+        }).filter(Boolean);
+        content = [...files, { type: 'text', text: m.content || '첨부한 파일을 봐 주세요.' }];
       } else {
         content = [{ type: 'text', text: m.content }];
       }
@@ -134,8 +140,9 @@
     const { messages, signal } = opts;
     const last = [...messages].reverse().find((m) => m.role === 'user');
     const text = (last && last.content) || '';
-    const hasImg = last && (last.images || []).length;
-    const reply = hasImg ? `이미지 ${last.images.length}장을 받았어요. API 키를 연결하면 Claude가 이미지 내용을 실제로 읽고 설명해 줘요.` : DEMO.find(([re]) => re.test(text))[1];
+    const files = (last && last.files) || [];
+    const hasImg = files.length > 0;
+    const reply = hasImg ? `파일 ${files.length}개(${files.map((f) => f.name).join(', ')})를 받았어요. API 키를 연결하면 Claude가 이미지와 PDF, 텍스트 파일 내용을 실제로 읽고 답해 줘요.` : DEMO.find(([re]) => re.test(text))[1];
     try {
       await sleep(250, signal);
       if (!hasImg) {

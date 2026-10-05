@@ -2,15 +2,30 @@
 (function () {
   const K_CONVS = 'moa.convs.v1';
   const K_SETTINGS = 'moa.settings.v1';
-  const DEFAULTS = { name: '', apiKey: '', model: 'claude-opus-5-5', effort: 'medium', system: '', theme: 'system', webSearch: false };
+  const K_SESSION_KEY = 'moa.key.session.v1';
+  const DEFAULTS = { name: '', apiKey: '', rememberKey: true, model: 'claude-opus-5-5', effort: 'medium', system: '', theme: 'system', webSearch: false };
 
   const read = (k, fallback) => {
     try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (_) { return fallback; }
   };
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-  let convs = read(K_CONVS, []);
-  let settings = Object.assign({}, DEFAULTS, read(K_SETTINGS, {}));
+  /** 예전 형식(images 배열)을 files 배열로 옮긴다 */
+  function migrate(list) {
+    for (const c of list) for (const m of c.messages || []) {
+      if (m.images && !m.files) m.files = m.images.map((i) => ({ kind: 'image', ...i }));
+      delete m.images;
+    }
+    return list;
+  }
+  let convs = migrate(read(K_CONVS, []));
+  /** rememberKey가 꺼져 있으면 API 키는 이 탭(sessionStorage)에만 둔다 */
+  function loadSettings() {
+    const st = Object.assign({}, DEFAULTS, read(K_SETTINGS, {}));
+    if (!st.rememberKey) { try { st.apiKey = sessionStorage.getItem(K_SESSION_KEY) || ''; } catch (_) { st.apiKey = ''; } }
+    return st;
+  }
+  let settings = loadSettings();
   const listeners = new Set();
   const removed = new Set();
   const emit = (what) => listeners.forEach((fn) => fn(what));
@@ -21,7 +36,7 @@
     const sorted = convs.slice().sort((a, b) => a.updatedAt - b.updatedAt);
     for (const c of sorted) {
       let changed = false;
-      for (const m of c.messages) for (const img of m.images || []) if (img.data) { img.data = ''; img.dropped = true; changed = true; }
+      for (const m of c.messages) for (const f of m.files || []) if (f.data || f.text) { f.data = ''; f.text = ''; f.dropped = true; changed = true; }
       if (changed) {
         try { localStorage.setItem(K_CONVS, JSON.stringify(convs)); return 'trimmed'; } catch (_) { /* 계속 */ }
       }
@@ -33,14 +48,19 @@
     uid,
     /** 다른 탭에서 바뀐 저장 내용을 다시 읽는다 */
     reload() {
-      convs = read(K_CONVS, []);
-      settings = Object.assign({}, DEFAULTS, read(K_SETTINGS, {}));
+      convs = migrate(read(K_CONVS, []));
+      settings = loadSettings();
     },
     on(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     get settings() { return settings; },
     saveSettings(patch) {
       settings = Object.assign({}, settings, patch);
-      try { localStorage.setItem(K_SETTINGS, JSON.stringify(settings)); } catch (_) {}
+      const toSave = Object.assign({}, settings);
+      try {
+        if (settings.rememberKey) sessionStorage.removeItem(K_SESSION_KEY);
+        else { sessionStorage.setItem(K_SESSION_KEY, settings.apiKey || ''); toSave.apiKey = ''; }
+      } catch (_) { if (!settings.rememberKey) toSave.apiKey = ''; }
+      try { localStorage.setItem(K_SETTINGS, JSON.stringify(toSave)); } catch (_) {}
       emit('settings');
     },
     list() { return convs.slice().sort((a, b) => (b.pinned - a.pinned) || (b.updatedAt - a.updatedAt)); },
@@ -75,6 +95,7 @@
       let data;
       try { data = JSON.parse(text); } catch (_) { throw new Error('백업 파일을 읽지 못했어요. 모아에서 받은 .json 파일인지 확인해 주세요.'); }
       if (!data || data.app !== 'moa' || !Array.isArray(data.conversations)) throw new Error('모아 백업 파일이 아니에요.');
+      migrate(data.conversations.filter((c) => c && Array.isArray(c.messages)));
       let n = 0;
       for (const c of data.conversations) {
         if (!c || typeof c.id !== 'string' || !Array.isArray(c.messages)) continue;

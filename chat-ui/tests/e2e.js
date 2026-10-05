@@ -321,6 +321,57 @@ const tests = {
     assert(n === 2, `저장된 대화 2개 (${n})`);
     await ctx.close();
   },
+  async 'PDF·텍스트 파일 첨부: 칩으로 보이고, 지원하지 않는 형식은 안내'(b) {
+    const p = await newPage(b);
+    await p.setInputFiles('#file', [
+      { name: '보고서.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%fake\n') },
+      { name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# 메모\n- 하나') },
+    ]);
+    await p.waitForFunction(() => document.querySelectorAll('#attach-list .fchip').length === 2);
+    assert((await p.textContent('#attach-list')).includes('보고서.pdf'), 'PDF 칩');
+    await p.setInputFiles('#file', { name: 'app.exe', mimeType: 'application/octet-stream', buffer: Buffer.from([0, 1, 2]) });
+    await p.waitForSelector('.toast');
+    assert((await p.textContent('.toast')).includes('첨부할 수 있어요'), '형식 안내');
+    await p.fill('#input', '요약해줘');
+    await p.press('#input', 'Enter');
+    await p.waitForFunction(() => !document.body.classList.contains('is-busy') && document.querySelector('.msg--ai .actions'));
+    assert((await p.$$('.msg--user .fchip')).length === 2, '보낸 메시지에 파일 칩');
+    assert((await p.textContent('.msg--ai .md')).includes('보고서.pdf'), '데모 답변이 파일을 언급');
+  },
+  async '예전 형식(images) 대화를 불러오면 files로 옮겨 그대로 보인다'(b) {
+    const ctx = await b.newContext();
+    await ctx.addInitScript(() => {
+      if (localStorage.getItem('moa.convs.v1')) return;
+      localStorage.setItem('moa.convs.v1', JSON.stringify([{ id: 'old1', title: '예전 대화', createdAt: 1, updatedAt: Date.now(), pinned: false, messages: [
+        { id: 'u', role: 'user', content: '이 그림', images: [{ name: 'a.png', mediaType: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' }] },
+        { id: 'a', role: 'assistant', content: '네', model: 'demo' }] }]));
+    });
+    const p = await ctx.newPage();
+    await p.route(/fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net\/gh\//, (r) => r.abort());
+    await p.goto(BASE + '#old1');
+    assert(await p.isVisible('.msg--user .imgs img'), '예전 이미지 표시');
+    await p.click('.msg--ai [data-v="up"]');
+    const m = await p.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1'))[0].messages[0]);
+    assert(m.files && m.files[0].kind === 'image' && !m.images, 'files로 저장');
+    await ctx.close();
+  },
+  async '단축키 도움말(?)과 키 기억하지 않기'(b) {
+    const p = await newPage(b);
+    await p.click('#scroll', { force: true }).catch(() => {});
+    await p.evaluate(() => document.activeElement.blur());
+    await p.keyboard.press('?');
+    assert(await p.isVisible('.keys'), '단축키 창');
+    await p.keyboard.press('Escape');
+    await p.click('.me');
+    await p.fill('#set-key', 'sk-ant-temp');
+    await p.uncheck('#set-remember');
+    await p.click('#settings-form .btn--blue');
+    const stored = await p.evaluate(() => [JSON.parse(localStorage.getItem('moa.settings.v1')).apiKey, sessionStorage.getItem('moa.key.session.v1')]);
+    assert(stored[0] === '' && stored[1] === 'sk-ant-temp', `키는 세션에만 (${stored})`);
+    assert((await p.textContent('#me-plan')) === 'Claude 연결됨', '연결 표시');
+    await p.reload();
+    assert((await p.textContent('#me-plan')) === 'Claude 연결됨', '같은 탭 새로고침은 유지');
+  },
   async '모바일: 가로 넘침 없음 · 메뉴 서랍 열고 닫기'(b) {
     const p = await newPage(b, { viewport: { width: 390, height: 844 } });
     await sendAndWait(p, '월급 300 저축 계획');
@@ -408,6 +459,30 @@ const liveTests = {
     assert((await p.$$('.src')).length === 2, '출처 2개');
     assert((await p.getAttribute('.src.is-cited', 'href')) === 'https://weather.example/seoul', '인용 출처 강조');
     assert((await p.textContent('.msg--ai .ai__body > .md')).includes('맑아요'), '답변 본문');
+  },
+  async '실제 SDK: PDF·텍스트는 document 블록으로, 파일이 질문보다 먼저'(b) {
+    const p = await newPage(b, { settings: { apiKey: 'sk-ant-test' } });
+    const calls = await mockApi(p, () => ({ body: streamBody('요약했어요.') }));
+    await p.setInputFiles('#file', [
+      { name: 'r.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test') },
+      { name: 'a.csv', mimeType: 'text/csv', buffer: Buffer.from('이름,값\n가,1') },
+    ]);
+    await p.waitForFunction(() => document.querySelectorAll('#attach-list .fchip').length === 2);
+    await sendAndWait(p, '정리해줘');
+    const content = calls[0].body.messages[0].content;
+    assert(content[0].type === 'document' && content[0].source.type === 'base64' && content[0].source.media_type === 'application/pdf' && content[0].title === 'r.pdf', 'PDF document 블록');
+    assert(content[1].type === 'document' && content[1].source.type === 'text' && content[1].source.data.includes('이름,값'), '텍스트 document 블록');
+    assert(content[2].type === 'text' && content[2].text === '정리해줘', '질문은 마지막');
+  },
+  async '실제 SDK: 길이 초과 후 "이어서 쓰기"는 새 요청을 보낸다'(b) {
+    const p = await newPage(b, { settings: { apiKey: 'sk-ant-test' } });
+    let n = 0;
+    const calls = await mockApi(p, () => ({ body: streamBody(++n === 1 ? '긴 답변 앞부분' : '뒷부분', n === 1 ? 'max_tokens' : 'end_turn') }));
+    await sendAndWait(p, '길게 써줘');
+    await p.click('[data-action="continue"]');
+    await p.waitForFunction(() => document.querySelectorAll('.msg--ai').length === 2 && !document.body.classList.contains('is-busy'));
+    const msgs = calls[1].body.messages;
+    assert(msgs.length === 3 && msgs[1].content[0].text === '긴 답변 앞부분' && msgs[2].content[0].text.includes('이어서'), '이어서 요청');
   },
   async '실제 SDK: 잘못된 키(401)면 안내와 설정 버튼'(b) {
     const p = await newPage(b, { settings: { apiKey: 'sk-ant-wrong' } });
