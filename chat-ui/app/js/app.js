@@ -12,7 +12,7 @@
   const el = {
     convs: $('#convs'), search: $('#search'), thread: $('#thread'), scroll: $('#scroll'), title: $('#title'),
     input: $('#input'), send: $('#send'), composer: $('#composer'), file: $('#file'), attachList: $('#attach-list'),
-    modelLabel: $('#model-label'), greeting: $('#greeting'), demoNotice: $('#demo-notice'), toBottom: $('#to-bottom'),
+    greeting: $('#greeting'), demoNotice: $('#demo-notice'), toBottom: $('#to-bottom'),
     meName: $('#me-name'), meAv: $('#me-av'), mePlan: $('#me-plan'), liveDot: $('#live-dot'),
     panel: $('#panel'), panelBody: $('#panel-body'), panelTitle: $('#panel-title'), panelSub: $('#panel-sub'), layer: $('#layer'),
     panelVer: $('#panel-ver'), panelPrev: $('#panel-prev'), panelNext: $('#panel-next'), panelFoot: $('#panel-foot'), recent: $('#recent'),
@@ -95,7 +95,6 @@
   function renderChrome() {
     const st = Store.settings;
     const live = API.isLive(st);
-    el.modelLabel.textContent = API.modelInfo(st.model).name;
     el.meName.textContent = st.name ? `${st.name}` : '내 계정';
     el.meAv.textContent = (st.name || '나').slice(0, 1);
     el.mePlan.textContent = API.server ? (live ? '서버 연결됨' : '비밀번호 필요') : live ? 'Claude 연결됨' : '데모 모드';
@@ -146,7 +145,7 @@
     if (m.stopped) h += '<div class="note">답변을 중간에 멈췄어요.</div>';
     if (m.truncated) h += `<div class="note note--row">답변이 너무 길어서 여기까지만 받았어요.${m.pending ? '' : '<button class="btn btn--weak" data-action="continue">이어서 쓰기</button>'}</div>`;
     if (m.error) {
-      const fix = m.fix === 'settings' ? '<button class="btn btn--weak" data-action="settings">설정 열기</button>' : m.fix === 'model' ? '<button class="btn btn--weak" data-action="model">모델 바꾸기</button>' : '';
+      const fix = m.fix === 'settings' ? '<button class="btn btn--weak" data-action="settings">설정 열기</button>' : '';
       h += `<div class="err" role="alert">${I.alert}<span>${esc(m.error)}</span>${fix}<button class="btn btn--weak" data-action="retry">다시 시도</button></div>`;
     }
     return h;
@@ -161,12 +160,11 @@
     return `<div class="sources"><div class="sources__label">출처 ${list.length}개</div><div class="sources__list">${shown.map(item).join('')}</div>${list.length > 4 ? `<button class="sources__more" data-action="more-sources">${open ? '접기' : `${list.length - 4}개 더 보기`}</button>` : ''}</div>`;
   }
   function aiHTML(m) {
-    const known = m.model && API.MODELS.find((x) => m.model.startsWith(x.id));
-    const model = m.model === 'demo' ? '데모' : known ? known.name : m.model || '';
+    const model = m.model === 'demo' ? '데모' : '';
     const u = m.usage;
     const fmt = (n) => (n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n));
     const usage = u ? `<span class="usage" title="입력 ${u.input.toLocaleString()}토큰${u.cached ? ` (캐시 ${u.cached.toLocaleString()})` : ''} · 출력 ${u.output.toLocaleString()}토큰${u.searches ? ` · 검색 ${u.searches}회` : ''} · 대략적인 추정치">${fmt(u.input + u.output)} 토큰 · $${u.cost < 0.01 ? u.cost.toFixed(4) : u.cost.toFixed(2)}</span>` : '';
-    const actions = m.pending ? '' : `<div class="actions">${m.content ? `<button data-action="copy-msg" aria-label="복사" title="복사">${I.copy}</button>` : ''}<button data-action="retry" aria-label="다시 생성" title="다시 생성">${I.retry}</button><button data-action="retry-model" aria-label="다른 모델로 다시 생성" title="다른 모델로 다시 생성" aria-haspopup="menu"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 8l5 5 5-5"/></svg></button>${m.content ? `<button data-action="feedback" data-v="up" aria-label="좋아요" aria-pressed="${m.feedback === 'up'}">${I.up}</button><button data-action="feedback" data-v="down" aria-label="별로예요" aria-pressed="${m.feedback === 'down'}">${I.down}</button>` : ''}${usage}</div>`;
+    const actions = m.pending ? '' : `<div class="actions">${m.content ? `<button data-action="copy-msg" aria-label="복사" title="복사">${I.copy}</button>` : ''}<button data-action="retry" aria-label="다시 생성" title="다시 생성">${I.retry}</button>${m.content ? `<button data-action="feedback" data-v="up" aria-label="좋아요" aria-pressed="${m.feedback === 'up'}">${I.up}</button><button data-action="feedback" data-v="down" aria-label="별로예요" aria-pressed="${m.feedback === 'down'}">${I.down}</button>` : ''}${usage}</div>`;
     return `<h2 class="ai__head"><i class="logo" aria-hidden="true">모</i>모아${model ? ` <small>· ${esc(model)}</small>` : ''}<span class="sr-only">의 답변</span></h2><div class="ai__body">${aiBodyHTML(m)}</div>${actions}`;
   }
   function msgNode(m) {
@@ -335,7 +333,7 @@
   async function generate() {
     const c = S.conv;
     const st = Store.settings;
-    const m = { id: Store.uid(), role: 'assistant', content: '', model: API.isLive(st) ? st.model : 'demo', pending: true, at: Date.now() };
+    const m = { id: Store.uid(), role: 'assistant', content: '', model: API.isLive(st) ? 'claude' : 'demo', pending: true, at: Date.now() };
     c.messages.push(m);
     el.thread.appendChild(msgNode(m));
     toBottom(false);
@@ -374,8 +372,7 @@
           m.content += ev.text; if (!frame) frame = requestAnimationFrame(paint);
         }
         if (ev.type === 'done') {
-          if (ev.model && ev.model !== 'demo') m.model = ev.model;
-          if (ev.usage) m.usage = API.summarizeUsage(ev.usage, m.model);
+          if (ev.usage) m.usage = API.summarizeUsage(ev.usage);
           if (ev.stopReason === 'refusal') m.error = '이 요청에는 답변할 수 없어요. 질문을 바꿔서 다시 물어봐 주세요.';
           if (ev.stopReason === 'max_tokens') m.truncated = true;
         }
@@ -482,18 +479,6 @@
   }
 
   /* ================= 시트: 모델 / 설정 ================= */
-  function openModelSheet() {
-    const st = Store.settings;
-    const live = API.isLive(st);
-    const { box, close } = openLayer('sheet', `<h2>어떤 모아와 대화할까요?</h2><p class="sheet__lead">${live ? '언제든 바꿀 수 있어요' : '데모 모드에서는 모델과 상관없이 준비된 답변이 나와요'}</p>` +
-      '<div role="radiogroup" aria-label="모델">' + API.MODELS.map((m, i) => `<button class="opt" role="radio" data-model="${m.id}" aria-checked="${m.id === st.model}"><span class="tile" style="background:${['var(--t-purple)', 'var(--blue-weak)', 'var(--t-green)'][i]}">${['🧠', '⚡️', '🍃'][i]}</span><span><b>${esc(m.name)}</b><small>${esc(m.desc)}</small></span><span class="radio"></span></button>`).join('') + '</div>', { label: '모델 선택' });
-    box.addEventListener('click', (e) => {
-      const o = e.target.closest('[data-model]'); if (!o) return;
-      Store.saveSettings({ model: o.dataset.model });
-      close(); toast(`${API.modelInfo(o.dataset.model).name}(으)로 바꿨어요`);
-    });
-  }
-
   function openSettings() {
     const st = Store.settings;
     const effort = [['low', '빠르게'], ['medium', '균형'], ['high', '깊게']];
@@ -505,7 +490,7 @@
         <div class="input-wrap"><input class="input" id="set-key" type="password" value="${esc(st.apiKey)}" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"><button type="button" data-toggle-key>보기</button></div>`}
         ${!API.server || API.server.passwordRequired ? `<label class="check-row"><input type="checkbox" id="set-remember" ${st.rememberKey ? 'checked' : ''}><span>이 기기에 ${API.server ? '비밀번호' : '키'} 기억하기 <small>끄면 탭을 닫을 때 지워져요</small></span></label>` : ''}
         ${API.server ? '' : '<p class="hint">키는 이 브라우저에만 저장되고 Anthropic API로만 전송돼요. 개인용으로만 쓰고, 여러 사람이 쓰는 서비스라면 키를 서버에 두세요(server/server.mjs). 키는 <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener noreferrer">Claude Console</a>에서 만들 수 있어요.</p>'}</div>
-      <div class="field"><span class="field__label">답변 깊이 <small>Haiku에는 적용되지 않아요</small></span>${seg('effort', effort, st.effort)}</div>
+      <div class="field"><span class="field__label">답변 깊이</span>${seg('effort', effort, st.effort)}</div>
       <label class="field"><span class="field__label">맞춤 지침 <small>모든 대화에 적용</small></span><textarea class="input" id="set-system" maxlength="4000" placeholder="예) 항상 존댓말로, 핵심부터 짧게 답해줘">${esc(st.system)}</textarea></label>
       <div class="field"><span class="field__label">화면 테마</span>${seg('theme', theme, st.theme)}</div>
       <div class="sheet__foot"><button type="button" class="btn" data-close-sheet>닫기</button><button class="btn btn--blue">저장하기</button></div>
@@ -620,7 +605,6 @@
       case 'toggle-nav': toggleNav(); break;
       case 'close-nav': closeNav(); break;
       case 'settings': openSettings(); break;
-      case 'model': openModelSheet(); break;
       case 'attach': el.file.click(); break;
       case 'mic': toggleMic(); break;
       case 'detach': S.attachments.splice(+a.dataset.i, 1); renderAttachments(); syncInput(); break;
@@ -641,18 +625,6 @@
       case 'edit-cancel': S.editing = null; renderThread(); break;
       case 'retry': if (msg && !S.busy) regenerate(msg.id); break;
       case 'continue': if (!S.busy) { el.input.value = '끊긴 부분부터 이어서 써줘. 앞부분은 반복하지 마.'; submit(); } break;
-      case 'retry-model': {
-        if (!msg || S.busy) break;
-        const cur = Store.settings.model;
-        const { box, close } = openLayer('menu', `<div class="menu__label">다른 모델로 다시 생성</div>` + API.MODELS.map((x) => `<button role="menuitemradio" aria-checked="${x.id === cur}" data-rm="${x.id}">${esc(x.name)}${x.id === cur ? ' <small>· 지금</small>' : ''}</button>`).join(''), { anchor: a, label: '다른 모델로 다시 생성' });
-        box.addEventListener('click', (ev) => {
-          const o = ev.target.closest('[data-rm]'); if (!o) return;
-          close();
-          if (o.dataset.rm !== cur) Store.saveSettings({ model: o.dataset.rm });
-          regenerate(msg.id);
-        });
-        break;
-      }
       case 'feedback':
         if (msg) {
           msg.feedback = msg.feedback === a.dataset.v ? null : a.dataset.v;

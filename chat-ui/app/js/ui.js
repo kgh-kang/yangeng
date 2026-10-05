@@ -49,7 +49,7 @@
     });
     layers.push(close);
     const first = box.querySelector('input:not([type="hidden"]):not([hidden]), textarea, [autofocus]') || box.querySelector('button');
-    setTimeout(() => { if (wrap.isConnected && !box.contains(document.activeElement)) (first || box).focus({ preventScroll: true }); }, 30);
+    (first || box).focus({ preventScroll: true }); // 열자마자 포커스를 안으로 (지연이 있으면 그 사이 Tab이 뒤 화면으로 샘)
     return { box, close };
   }
   function closeLayers() { while (layers.length) layers[layers.length - 1](); }

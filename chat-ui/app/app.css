@@ -106,8 +106,6 @@ svg { flex: none; }
 .head__title { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 4px 8px; border-radius: 10px; text-align: left; }
 .head__title:hover { background: var(--fill); }
 .is-empty .head__title, .is-empty [data-action="conv-menu"] { visibility: hidden; }
-.pill { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 12px; border-radius: 999px; background: var(--fill); font-size: 14px; font-weight: 600; color: var(--sub); white-space: nowrap; }
-.pill:hover { background: var(--fill-strong); }
 
 .scroll { flex: 1; overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
 .thread { max-width: 760px; margin: 0 auto; padding: 8px 24px 40px; display: flex; flex-direction: column; gap: 26px; }
@@ -269,8 +267,6 @@ svg { flex: none; }
 .panel__foot { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 8px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--sub); font-variant-numeric: tabular-nums; flex: none; }
 .panel__foot .icon-btn:disabled { opacity: .35; cursor: default; }
 .recent { margin-bottom: 22px; }
-.menu__label { font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 8px 12px 4px; }
-.menu small { color: var(--muted); font-weight: 500; }
 .panel__code { margin: 0; height: 100%; overflow: auto; padding: 18px 20px; font: 13px/1.7 var(--mono); white-space: pre; color: var(--code-fg); background: var(--code); }
 
 /* ---------- 시트 / 다이얼로그 / 메뉴 / 토스트 ---------- */

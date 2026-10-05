@@ -109,9 +109,10 @@ async function main() {
     const before = upstream.length;
     for (const [body, why] of [
       [{ model: 'claude-fable-5-1', max_tokens: 10, messages: msgs }, '모델'],
-      [{ model: 'claude-haiku-4-5', max_tokens: 10, messages: msgs, container: { skills: [] } }, '파라미터'],
-      [{ model: 'claude-haiku-4-5', max_tokens: 10, messages: msgs, tools: [{ type: 'code_execution_20260521', name: 'code_execution' }] }, '도구'],
-      [{ model: 'claude-haiku-4-5', max_tokens: 10, messages: [] }, '빈 messages'],
+      [{ model: 'claude-haiku-4-5', max_tokens: 10, messages: msgs }, '앱이 쓰지 않는 모델'],
+      [{ model: 'claude-opus-5-5', max_tokens: 10, messages: msgs, container: { skills: [] } }, '파라미터'],
+      [{ model: 'claude-opus-5-5', max_tokens: 10, messages: msgs, tools: [{ type: 'code_execution_20260521', name: 'code_execution' }] }, '도구'],
+      [{ model: 'claude-opus-5-5', max_tokens: 10, messages: [] }, '빈 messages'],
     ]) {
       const r = await post(body);
       assert(r.status === 400, `${why}: ${r.status}`);
@@ -128,7 +129,7 @@ async function main() {
   });
   await run('속도 제한: 한도를 넘으면 429, 브라우저는 자동 재시도 없이 안내', async () => {
     let last;
-    for (let i = 0; i < 8; i++) last = await post({ model: 'claude-haiku-4-5', max_tokens: 10, messages: msgs });
+    for (let i = 0; i < 8; i++) last = await post({ model: 'claude-opus-5-5', max_tokens: 10, messages: msgs });
     assert(last.status === 429 && last.headers.get('x-should-retry') === 'false', `429 (${last.status})`);
     const p = await page();
     await setPassword(p, 'pw1234');

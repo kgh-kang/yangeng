@@ -3,7 +3,7 @@
   const K_CONVS = 'moa.convs.v1';
   const K_SETTINGS = 'moa.settings.v1';
   const K_SESSION_KEY = 'moa.key.session.v1';
-  const DEFAULTS = { name: '', apiKey: '', serverPassword: '', rememberKey: true, model: 'claude-opus-5-5', effort: 'medium', system: '', theme: 'system', webSearch: false };
+  const DEFAULTS = { name: '', apiKey: '', serverPassword: '', rememberKey: true, effort: 'medium', system: '', theme: 'system', webSearch: false };
 
   const read = (k, fallback) => {
     try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (_) { return fallback; }

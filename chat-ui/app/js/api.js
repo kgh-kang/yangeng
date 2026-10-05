@@ -7,13 +7,9 @@
  * 여러 사용자가 쓰는 서비스라면 키를 서버에 두고 같은 요청을 서버에서 보내야 한다. */
 (function () {
   const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.131.0/+esm';
-  const MODELS = [
-    // price: 100만 토큰당 USD [입력, 출력]
-    { id: 'claude-opus-5-5', name: '모아 깊게', desc: '어려운 문제도 정확하게 · Claude Opus 5.5', effort: true, fallbacks: true, price: [4, 20] },
-    { id: 'claude-sonnet-5-5', name: '모아 기본', desc: '빠르고 똑똑하게 · Claude Sonnet 5.5', effort: true, fallbacks: true, price: [2, 10] },
-    { id: 'claude-haiku-4-5', name: '모아 라이트', desc: '짧은 질문에 가장 빠르게 · Claude Haiku 4.5', effort: false, fallbacks: false, price: [1, 5] },
-  ];
-  const modelInfo = (id) => MODELS.find((m) => m.id === id) || MODELS[0];
+  // 모델은 하나로 고정한다 (사용자가 고르지 않음). 가격: 100만 토큰당 USD
+  const MODEL = 'claude-opus-5-5';
+  const PRICE = { input: 4, output: 20 };
 
   let sdkPromise = null;
   const loadSdk = () => (sdkPromise ||= import(SDK_URL).catch((e) => { sdkPromise = null; throw e; }));
@@ -51,7 +47,7 @@
       if (err instanceof Anthropic.AuthenticationError) return server
         ? { message: '접속 비밀번호가 올바르지 않아요. 설정에서 다시 입력해 주세요.', fix: 'settings' }
         : { message: 'API 키가 올바르지 않아요. 설정에서 키를 다시 확인해 주세요.', fix: 'settings' };
-      if (err instanceof Anthropic.PermissionDeniedError) return { message: '이 API 키로는 선택한 모델을 쓸 수 없어요. 다른 모델을 골라 보세요.', fix: 'model' };
+      if (err instanceof Anthropic.PermissionDeniedError) return { message: '이 API 키로는 Claude를 쓸 권한이 없어요. 키의 권한을 확인해 주세요.', fix: 'settings' };
       if (err instanceof Anthropic.RateLimitError) return { message: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.' };
       if (err instanceof Anthropic.BadRequestError) return { message: `요청을 처리하지 못했어요: ${err.message}` };
       if (err instanceof Anthropic.InternalServerError) return { message: '서버가 잠시 불안정해요. 다시 시도해 주세요.' };
@@ -70,22 +66,17 @@
     const client = server
       ? new Anthropic({ apiKey: 'server-managed', baseURL: new URL('/api/anthropic', location.href).href, dangerouslyAllowBrowser: true, defaultHeaders: { 'x-moa-password': settings.serverPassword || '' } })
       : new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
-    const info = modelInfo(settings.model);
-    const params = { model: info.id, max_tokens: 64000, messages: toApiMessages(messages) };
+    const params = { model: MODEL, max_tokens: 64000, messages: toApiMessages(messages) };
     if (settings.system && settings.system.trim()) params.system = settings.system.trim();
-    if (info.effort) {
-      params.output_config = { effort: settings.effort || 'medium' };
-      // 생각 과정 요약을 받아 "생각하는 중" 화면에 보여준다 (기본값은 빈 문자열이라 명시해야 함)
-      params.thinking = { type: 'adaptive', display: 'summarized' };
-    }
+    params.output_config = { effort: settings.effort || 'medium' };
+    // 생각 과정 요약을 받아 "생각하는 중" 화면에 보여준다 (기본값은 빈 문자열이라 명시해야 함)
+    params.thinking = { type: 'adaptive', display: 'summarized' };
     // 대화가 길어질수록 앞부분을 캐시해 비용·지연을 줄인다
     params.cache_control = { type: 'ephemeral' };
     // 안전 분류기에 걸려 거절되면 서버가 다른 모델로 이어서 답하도록 기본 폴백을 켠다.
-    if (info.fallbacks) { params.betas = ['server-side-fallback-2026-07-01']; params.fallbacks = 'default'; }
-    if (settings.webSearch) {
-      // Opus/Sonnet은 동적 필터링이 있는 최신 버전, Haiku는 기본 버전
-      params.tools = [{ type: info.id === 'claude-haiku-4-5' ? 'web_search_20250305' : 'web_search_20260209', name: 'web_search', max_uses: 5 }];
-    }
+    params.betas = ['server-side-fallback-2026-07-01'];
+    params.fallbacks = 'default';
+    if (settings.webSearch) params.tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: 5 }];
 
     try {
       let msgs = params.messages;
@@ -181,9 +172,9 @@
   }
 
   /** 응답 usage → 표시용 요약. 캐시 쓰기 1.25배, 캐시 읽기 0.1배, 웹 검색 1천 회당 $10 (대략적인 추정) */
-  function summarizeUsage(usage, modelId) {
+  function summarizeUsage(usage) {
     if (!usage) return null;
-    const [pin, pout] = (MODELS.find((m) => modelId && modelId.startsWith(m.id)) || MODELS[0]).price;
+    const pin = PRICE.input, pout = PRICE.output;
     const input = usage.input_tokens || 0, write = usage.cache_creation_input_tokens || 0, read = usage.cache_read_input_tokens || 0;
     const output = usage.output_tokens || 0;
     const searches = (usage.server_tool_use && usage.server_tool_use.web_search_requests) || 0;
@@ -211,8 +202,6 @@
     detectServer,
     get server() { return server; },
     summarizeUsage,
-    MODELS,
-    modelInfo,
     toApiMessages,
     isLive: (settings) => (server ? !server.passwordRequired || !!(settings.serverPassword || '').trim() : !!(settings.apiKey && settings.apiKey.trim())),
     respond(opts) { return window.MoaAPI.isLive(opts.settings) ? claude(opts) : demo(opts); },

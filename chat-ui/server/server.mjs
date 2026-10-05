@@ -39,10 +39,10 @@ if (!PASSWORD) console.warn('경고: APP_PASSWORD가 없어 이 서버 주소를
 const client = new Anthropic(); // ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL 을 환경변수에서 읽음
 
 /* ---------- 허용 목록 ---------- */
-const MODELS = new Set(['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5']);
+const MODELS = new Set(['claude-opus-5-5']); // 앱은 모델 하나만 쓴다
 const BETAS = new Set(['server-side-fallback-2026-07-01']);
 const KEYS = new Set(['model', 'max_tokens', 'messages', 'system', 'output_config', 'thinking', 'cache_control', 'tools', 'fallbacks', 'stream']);
-const TOOL_TYPES = new Set(['web_search_20260209', 'web_search_20250305']);
+const TOOL_TYPES = new Set(['web_search_20260209']);
 
 class HttpError extends Error {
   constructor(status, type, message) { super(message); this.status = status; this.type = type; }

@@ -167,14 +167,10 @@ const tests = {
     await sendAndWait(p, 'HTML 카드 하나 더');
     assert(await p.isHidden('#panel'), '사용자가 닫은 대화에선 자동으로 다시 열지 않음');
   },
-  async '다른 모델로 다시 생성 · 빈 화면의 최근 대화 이어하기'(b) {
+  async '모델 선택 UI 없음 · 빈 화면의 최근 대화 이어하기'(b) {
     const p = await newPage(b);
     await sendAndWait(p, '저축 계획');
-    await p.click('.msg--ai [data-action="retry-model"]');
-    await p.click('[data-rm="claude-haiku-4-5"]');
-    await p.waitForFunction(() => !document.body.classList.contains('is-busy') && document.querySelector('.msg--ai .actions'));
-    assert((await p.textContent('#model-label')) === '모아 라이트', '모델 바뀜');
-    assert((await p.$$('.msg')).length === 2, '메시지 2개 유지');
+    assert(!(await p.$('[data-action="model"], [data-action="retry-model"], #model-label')), '모델 선택 UI가 없어야 함');
     await p.click('[data-action="new-chat"]');
     assert(await p.isVisible('#recent'), '최근 대화 섹션');
     assert((await p.textContent('#recent .row b')) === '저축 계획', '최근 대화 제목');
@@ -477,7 +473,7 @@ const liveTests = {
     assert(!(await p.evaluate(() => JSON.parse(localStorage.getItem('moa.convs.v1'))[0].messages[1].thinkStart)), 'thinkStart 정리');
     assert(c.body.messages.length === 1 && c.body.messages[0].role === 'user', 'messages');
     assert((await p.textContent('.msg--ai .md strong')) === 'Claude', '마크다운 렌더');
-    assert((await p.textContent('.msg--ai .ai__head')).includes('모아 깊게'), '모델 라벨');
+    assert((await p.textContent('.msg--ai .ai__head')).trim().startsWith('모'), '답변 머리말');
     assert(/토큰 · \$/.test(await p.textContent('.msg--ai .usage')), '토큰·비용 표시');
     assert((await p.getAttribute('.msg--ai .usage', 'title')).includes('입력 12토큰'), '토큰 상세 툴팁');
     // 두 번째 턴: 이전 대화가 함께 전달되는지
@@ -485,13 +481,11 @@ const liveTests = {
     assert(calls[1].body.messages.length === 3, '이전 대화 포함');
     assert(calls[1].body.messages[1].role === 'assistant', '역할 교대');
   },
-  async '실제 SDK: Haiku는 effort·fallbacks 없이 보낸다'(b) {
+  async '실제 SDK: 예전에 다른 모델을 골라 저장했어도 항상 같은 모델로 보낸다'(b) {
     const p = await newPage(b, { settings: { apiKey: 'sk-ant-test', model: 'claude-haiku-4-5' } });
-    const calls = await mockApi(p, () => ({ body: streamBody('네.', 'end_turn', 'claude-haiku-4-5') }));
+    const calls = await mockApi(p, () => ({ body: streamBody('네.') }));
     await sendAndWait(p, '짧게');
-    assert(!calls[0].body.output_config, 'effort 없음');
-    assert(!calls[0].body.fallbacks, 'fallbacks 없음');
-    assert(!calls[0].body.thinking, 'Haiku는 thinking 없음');
+    assert(calls[0].body.model === 'claude-opus-5-5', `모델 고정 (${calls[0].body.model})`);
   },
   async '실제 SDK: 웹 검색 도구 · 검색어/출처/인용 표시 · pause_turn 이어받기'(b) {
     const p = await newPage(b, { settings: { apiKey: 'sk-ant-test', webSearch: true } });
